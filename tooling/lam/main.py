@@ -13,7 +13,7 @@ def list_local_lambdas(dir):
     subdirs = [f for f in listdir(dir) if isdir(join(dir, f))]
     return(subdirs)
 
-def build_and_zip(lambda_dir, lib_dir, skip_zip, skip_build):
+def build_and_zip(lambda_dir, root_dir, skip_zip, skip_build):
     lambdas = list_local_lambdas(lambda_dir)
 
     steps = [
@@ -32,7 +32,7 @@ def build_and_zip(lambda_dir, lib_dir, skip_zip, skip_build):
                     repeat(step['function']),
                     lambdas,
                     repeat(lambda_dir),
-                    repeat(lib_dir)
+                    repeat(root_dir)
                     )
             if step['skip']:
                 print(warn('Skipping %s of lambdas' % step['step']))
@@ -59,9 +59,9 @@ def build_and_zip(lambda_dir, lib_dir, skip_zip, skip_build):
 
     print(good('Finished build, zip, test, upload'))
 
-def safe_fail(func,name,lambda_dir,lib_dir):
+def safe_fail(func,name,lambda_dir,root_dir):
     try:
-        ret = func(name,lambda_dir,lib_dir)
+        ret = func(name,lambda_dir,root_dir)
     except Exception:
         msg = traceback.format_exc()
         ret = {'Success':False,'msg':msg}
@@ -73,7 +73,7 @@ def safe_fail(func,name,lambda_dir,lib_dir):
 # {'Success':True|False,
 #  'msg':str}
 # msg won't be there if it was a success
-def build_one(name,lambda_dir,lib_dir):
+def build_one(name,lambda_dir,root_dir):
     print('   Building env for lambda %s' % name)
 
     makefile_short = 'makeScript.sh'
@@ -85,7 +85,7 @@ def build_one(name,lambda_dir,lib_dir):
         success = False
     else:
         # https://stackoverflow.com/a/4760517
-        result = subprocess.run([makefile_long, lib_dir],
+        result = subprocess.run([makefile_long, root_dir],
                                 stdout=subprocess.PIPE,
                                 stderr=subprocess.PIPE,
                                 cwd=os.path.join(lambda_dir,name),
@@ -106,7 +106,8 @@ def build_one(name,lambda_dir,lib_dir):
     return(ret) # success
 
 # lambda_dir is the root dir of all lambdas
-def zip_one(name,lambda_dir,lib_dir):
+def zip_one(name,lambda_dir,root_dir):
     print('   Zipping env for lambda %s' % name)
-    ret = {'Success':True,'msg':'Not actually zipping'}
+    ret = {'Success':False,'msg':'Not actually zipping'}
+    assert(False)
     return(ret)

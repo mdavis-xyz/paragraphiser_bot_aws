@@ -1,7 +1,8 @@
 env/
 */env/
 muckaround/*
-*praw.ini
+praw.ini
+credentials/*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

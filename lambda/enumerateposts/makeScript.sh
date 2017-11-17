@@ -22,7 +22,7 @@ pip install nose
 pip install boto3
 pip install praw
 
-cp $1/praw.ini ./
+cp $1/credentials/praw.ini ./
 
 deactivate
 

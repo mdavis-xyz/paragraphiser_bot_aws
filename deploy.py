@@ -7,9 +7,9 @@ from tooling.colour import warn, error, emph, good
 import sys
 import os
 
-this_dir = os.path.dirname(os.path.realpath(__file__))
-lambda_dir = os.path.join(this_dir,'lambda')
-lib_dir = os.path.join(this_dir,'lib')
+root_dir = os.path.dirname(os.path.realpath(__file__))
+lambda_dir = os.path.join(root_dir,'lambda')
+lib_dir = os.path.join(root_dir,'lib')
 
 def arguments(argv):
     parser = argparse.ArgumentParser(description="Push updates to AWS Deployment")
@@ -38,7 +38,7 @@ def main(argv):
     v = arguments(argv)
 
     print(emph('deploying %s' % v.deployment_name))
-    lam.build_and_zip(lambda_dir, lib_dir, v.skip_zip, v.skip_build)
+    lam.build_and_zip(lambda_dir, root_dir, v.skip_zip, v.skip_build)
     print(good('Done'))
 
 

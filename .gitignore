@@ -4,6 +4,7 @@ muckaround/*
 praw.ini
 data/credentials/*
 artefacts/*
+*.zip
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

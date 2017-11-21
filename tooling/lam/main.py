@@ -12,11 +12,12 @@ import zipfile
 
 class Lam(object):
 
-    def __init__(self,lambda_dir,lib_dir,data_dir,code_bucket):
+    def __init__(self,region, lambda_dir,lib_dir,data_dir,code_bucket):
         self.lambda_dir = lambda_dir
         self.lib_dir = lib_dir
         self.code_bucket = code_bucket
         self.data_dir = data_dir
+        self.region = region
 
     def list_local_lambdas(self):
         subdirs = [f for f in listdir(self.lambda_dir) if isdir(join(self.lambda_dir, f))]
@@ -24,6 +25,21 @@ class Lam(object):
 
     def the_lot(self,skip_zip, skip_build):
         lambdas = self.list_local_lambdas()
+
+        # check code bucket exists
+
+        client = boto3.client('s3')
+        response = client.list_buckets()
+        buckets = [b['Name'] for b in response['Buckets']]
+        if self.code_bucket not in buckets:
+            print('Bucket %s does not exist, creating it now' % self.code_bucket)
+            response = client.create_bucket(
+                ACL='private',
+                Bucket=self.code_bucket,
+                CreateBucketConfiguration={
+                    'LocationConstraint': self.region
+                }
+            )
 
         steps = [
             {'step':'build',
@@ -157,7 +173,10 @@ class Lam(object):
         return(ret)
 
     def upload_one(self,name):
+        zip_fname = os.path.join(self.lambda_dir,name,"lambda.zip")
 
-        ret = {'Success':True,'msg':'Uploaded successfully'}
+
+        ret = {'Success':False,'msg':'Havent finished writing upload code yet'}
+
 
         return(ret)

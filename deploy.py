@@ -8,12 +8,6 @@ from tooling.colour import warn, error, emph, good
 import sys
 import os
 
-root_dir = os.path.dirname(os.path.realpath(__file__))
-lambda_dir = os.path.join(root_dir,'data','lambda')
-lib_dir = os.path.join(root_dir,'data','lib')
-cloudformation_dir = os.path.join(root_dir,'data','cloudformation')
-data_dir = os.path.join(root_dir,'data')
-code_bucket = 'paragraphiser_code'
 
 
 def arguments(argv):
@@ -43,7 +37,16 @@ def main(argv):
     v = arguments(argv)
 
     print(emph('deploying %s' % v.deployment_name))
-    prj = Project(lambda_dir,lib_dir,cloudformation_dir,data_dir,code_bucket)
+
+    root_dir = os.path.dirname(os.path.realpath(__file__))
+    lambda_dir = os.path.join(root_dir,'data','lambda')
+    lib_dir = os.path.join(root_dir,'data','lib')
+    cloudformation_dir = os.path.join(root_dir,'data','cloudformation')
+    data_dir = os.path.join(root_dir,'data')
+    code_bucket = 'paragraphiser-code'
+    region = 'ap-southeast-2'
+
+    prj = Project(region,lambda_dir,lib_dir,cloudformation_dir,data_dir,code_bucket)
     prj.lam.the_lot(v.skip_zip, v.skip_build)
     print(good('Done'))
 

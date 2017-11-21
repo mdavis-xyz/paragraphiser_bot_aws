@@ -2,7 +2,8 @@ env/
 */env/
 muckaround/*
 praw.ini
-credentials/*
+data/credentials/*
+artefacts/*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -2,14 +2,19 @@
 
 import argparse
 import pprint as pp
-from tooling import lam
+from tooling.project import Project
+# from tooling import lam
 from tooling.colour import warn, error, emph, good
 import sys
 import os
 
 root_dir = os.path.dirname(os.path.realpath(__file__))
-lambda_dir = os.path.join(root_dir,'lambda')
-lib_dir = os.path.join(root_dir,'lib')
+lambda_dir = os.path.join(root_dir,'data','lambda')
+lib_dir = os.path.join(root_dir,'data','lib')
+cloudformation_dir = os.path.join(root_dir,'data','cloudformation')
+data_dir = os.path.join(root_dir,'data')
+code_bucket = 'paragraphiser_code'
+
 
 def arguments(argv):
     parser = argparse.ArgumentParser(description="Push updates to AWS Deployment")
@@ -38,7 +43,8 @@ def main(argv):
     v = arguments(argv)
 
     print(emph('deploying %s' % v.deployment_name))
-    lam.build_and_zip(lambda_dir, root_dir, v.skip_zip, v.skip_build)
+    prj = Project(lambda_dir,lib_dir,cloudformation_dir,data_dir,code_bucket)
+    prj.lam.the_lot(v.skip_zip, v.skip_build)
     print(good('Done'))
 
 

@@ -175,8 +175,18 @@ class Lam(object):
     def upload_one(self,name):
         zip_fname = os.path.join(self.lambda_dir,name,"lambda.zip")
 
+        key = '%s-lambda.zip' % name
 
-        ret = {'Success':False,'msg':'Havent finished writing upload code yet'}
+        client = boto3.client('s3')
 
+        with open(zip_fname,"rb") as zip_f:
+            response = client.put_object(
+                ACL='bucket-owner-full-control',
+                Body=zip_f.read(),
+                Bucket=self.code_bucket,
+                Key=key
+            )
+
+        ret = {'Success':True,'msg':'Uploaded sucessfully'}
 
         return(ret)

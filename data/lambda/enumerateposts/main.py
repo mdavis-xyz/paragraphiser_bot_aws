@@ -8,6 +8,6 @@ def lambda_handler(event, context):
 
     logger.info('event: ' + str(event))
 
-    logger.info('hellow world')
+    logger.info('hello world')
 
     return('OK')

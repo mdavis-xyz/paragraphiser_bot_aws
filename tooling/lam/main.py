@@ -23,7 +23,7 @@ class Lam(object):
         subdirs = [f for f in listdir(self.lambda_dir) if isdir(join(self.lambda_dir, f))]
         return(subdirs)
 
-    def the_lot(self,skip_zip, skip_build):
+    def the_lot(self,skip_zip, skip_build, skip_upload):
         lambdas = self.list_local_lambdas()
 
         # check code bucket exists
@@ -50,7 +50,7 @@ class Lam(object):
              'skip':skip_zip},
             {'step':'upload',
              'function':self.upload_one,
-             'skip':False}
+             'skip':skip_upload}
         ]
 
         with Pool(3) as p:
@@ -175,7 +175,7 @@ class Lam(object):
     def upload_one(self,name):
         zip_fname = os.path.join(self.lambda_dir,name,"lambda.zip")
 
-        key = '%s-lambda.zip' % name
+        key = '%s.zip' % name
 
         client = boto3.client('s3')
 

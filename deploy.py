@@ -29,6 +29,12 @@ def arguments(argv):
                        action="store_true"
                        )
 
+
+    parser.add_argument('-u', '--skip-zip-upload',
+                       help="Do not upload lambda lambdas",
+                       action="store_true"
+                       )
+
     args = parser.parse_args(argv[1:])
     return(args)
 
@@ -43,11 +49,12 @@ def main(argv):
     lib_dir = os.path.join(root_dir,'data','lib')
     cloudformation_dir = os.path.join(root_dir,'data','cloudformation')
     data_dir = os.path.join(root_dir,'data')
-    code_bucket = 'paragraphiser-code'
+    project_name = 'paragraphiser'
+    code_bucket = '%s-code' % project_name
     region = 'ap-southeast-2'
 
-    prj = Project(region,lambda_dir,lib_dir,cloudformation_dir,data_dir,code_bucket)
-    prj.lam.the_lot(v.skip_zip, v.skip_build)
+    prj = Project(project_name,region,lambda_dir,lib_dir,cloudformation_dir,data_dir,code_bucket)
+    prj.the_lot(v.skip_zip, v.skip_build, v.skip_zip_upload)
     print(good('Done'))
 
 

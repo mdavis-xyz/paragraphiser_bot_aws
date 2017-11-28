@@ -1,19 +1,17 @@
 AWSTemplateFormatVersion: 2010-09-09
 Parameters:
-      deploymentid:
+      botname:
           Type: String
-          Description: t value (unix time) of this deployment, excluding the "t"
+          Description: Name of the reddit bot
       codebucket:
           Type: String
           Description: S3 bucket where lambda code should be saved
 Resources:
-# The set of permissions for replication do not seem
-# to work if they're bundled into the main role.
       ExecutionRole:
           Type: "AWS::IAM::Role"
           Properties:
              Path : "/"
-             RoleName: !Join [ "-", [ "exec", !Ref "deploymentid"] ]
+             RoleName: !Join [ "-", [ "exec", !Ref "botname"] ]
              Policies:
               - PolicyName: "CloudwatchLogs"
                 PolicyDocument:
@@ -115,14 +113,14 @@ Resources:
                      Effect: Allow
                      Principal:
                          Service: [ "logs.ap-southeast-2.amazonaws.com" ]
-      subscribetotopic:
+      enumerateposts:
           Type: AWS::Lambda::Function
           Properties:
             Code:
               S3Bucket: !Ref "codebucket"
               S3Key: enumerateposts.zip
-            Handler: worker_function.lambda_handler
-            Runtime: python3.5
+            Handler: main.lambda_handler
+            Runtime: python3.6
             Timeout: 300
             Role:
                 "Fn::GetAtt": ["ExecutionRole", "Arn"]

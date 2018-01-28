@@ -26,76 +26,81 @@ class Lam(object):
         subdirs = [f for f in listdir(self.lambda_dir) if isdir(join(self.lambda_dir, f))]
         return(subdirs)
 
-    def the_lot(self,skip_zip, skip_build, skip_upload,skip_test):
-        lambdas = self.list_local_lambdas()
+    # build, zip, upload
+    def the_lot(self,skip_zip, skip_build, skip_upload):
 
-        # check code bucket exists
 
-        client = boto3.client('s3')
-        response = client.list_buckets()
-        buckets = [b['Name'] for b in response['Buckets']]
-        if self.code_bucket not in buckets:
-            print('Bucket %s does not exist, creating it now' % self.code_bucket)
-            response = client.create_bucket(
+        if skip_build:
+            print(warn('Skipping building of lambdas'))
+        else:
+            self.do_work('build',self.build_one)
+
+        if skip_zip:
+            print(warn('Skipping zipping of lambdas'))
+        else:
+            self.do_work('zip',self.zip_one)
+
+
+        if skip_upload:
+            print(warn('Skipping uploading of lambdas'))
+        else:
+
+            # check code bucket exists
+
+            client = boto3.client('s3')
+            response = client.list_buckets()
+            buckets = [b['Name'] for b in response['Buckets']]
+            if self.code_bucket not in buckets:
+                print('Bucket %s does not exist, creating it now' % self.code_bucket)
+                response = client.create_bucket(
                 ACL='private',
                 Bucket=self.code_bucket,
                 CreateBucketConfiguration={
-                    'LocationConstraint': self.region
+                'LocationConstraint': self.region
                 }
-            )
+                )
 
-        steps = [
-            {'step':'build',
-             'function':self.build_one,
-             'skip':skip_build},
-            {'step':'zip',
-             'function':self.zip_one,
-             'skip':skip_zip},
-            {'step':'upload',
-             'function':self.upload_one,
-             'skip':skip_upload},
-            {'step':'test',
-             'function':self.test_one,
-             'skip':skip_test,
-             'prep_function':self.test_user}
-        ]
+            self.do_work('upload',self.upload_one)
+
+    def test_lambdas(skip_test):
+        if skip_test:
+            print(warn('Skipping testing of lambdas'))
+        else:
+            self.do_work('test',self.test_one)
+
+
+    # step is a string
+    # function is a function to which we call
+    def do_work(self,step,function):
+        lambdas = self.list_local_lambdas()
 
         with Pool(3) as p:
 
-            for step in steps:
-                args = zip(
-                        repeat(step['function']),
-                        lambdas
-                        )
-                if step['skip']:
-                    print(warn('Skipping %s of lambdas' % step['step']))
-                else:
-                    if 'prep_function' in step:
-                        print('Doing preperation work for %s of lambdas' % step['step'])
-                        step['prep_function']()
-                        print('Finished preperation work for %s of lambdas' % step['step'])
-                    print('About to %s lambdas' % step['step'])
-                    results = p.starmap(self.safe_fail, args)
-                    results = [{'name':name,
-                               'msg':result['msg'],
-                               'Success':result['Success']}
-                               for (name,result) in zip(lambdas,results)]
+            args = zip(
+                    repeat(function),
+                    lambdas
+                    )
 
-                    failed = [result for result in results if not result['Success']]
-                    if len(failed) > 0:
-                        print('\n' + '#'*20 + '\n')
-                        print(failed[0]['msg'])
-                        print('\n' + '#'*20 + '\n')
-                        print(error('Unable to %s the following lambdas:' % step['step']))
-                        print('   ' + '\n   '.join([x['name'] for x in failed]))
-                        print('Output for %s of lambda %s shown above' % (step['step'],failed[0]['name']))
-                        # pp.pprint(results)
-                        exit(1)
-                    else:
-                        print(good('Successfully completed %s for all lambdas' % step['step']))
+            print('About to %s lambdas' % step)
+            results = p.starmap(self.safe_fail, args)
+            results = [{'name':name,
+                       'msg':result['msg'],
+                       'Success':result['Success']}
+                       for (name,result) in zip(lambdas,results)]
 
+            failed = [result for result in results if not result['Success']]
+            if len(failed) > 0:
+                print('\n' + '#'*20 + '\n')
+                print(failed[0]['msg'])
+                print('\n' + '#'*20 + '\n')
+                print(error('Unable to %s the following lambdas:' % step))
+                print('   ' + '\n   '.join([x['name'] for x in failed]))
+                print('Output for %s of lambda %s shown above' % (step,failed[0]['name']))
+                # pp.pprint(results)
+                exit(1)
+            else:
+                print(good('Successfully completed %s for all lambdas' % step))
 
-        print(good('Finished build, zip, test, upload'))
 
     def safe_fail(self,func,name):
         try:
@@ -151,6 +156,12 @@ class Lam(object):
         with zipfile.ZipFile(zip_fname, "w", zipfile.ZIP_DEFLATED) as zf:
             zf.write(os.path.join(this_lambda_dir,"main.py"), "main.py")
             # TODO: deal with multiple files in root directory
+            cred_dir = os.path.join(this_lambda_dir,"credentials")
+            for dirname, subdirs, files in os.walk(cred_dir):
+                for filename in files:
+                    absname = os.path.abspath(os.path.join(dirname, filename))
+                    path_in_zip = os.path.join("credentials",filename)
+                    zf.write(absname, path_in_zip)
             for lib in ['lib','lib64']:
                 # TODO: don't hard code 3.6
                 for package_dir_name in ['site-packages', 'dist-packages']:
@@ -206,19 +217,9 @@ class Lam(object):
         return(ret)
 
 
-    def test_one(self,name):
-        # create or update a test lambda
-        print('   creating/updating test lambda for %s' % name)
-        self.create_test_lambda(name)
-        print('   created/updated test lambda for %s' % name)
-
-        print('   invoking test lambda for %s' % name)
-        ret = self.invoke_test_lambda(name)
-        print('   invoked test lambda for %s' % name)
-
-        return(ret)
 
     def invoke_test_lambda(self,name):
+        print('   invoking test lambda for %s' % name)
         client = boto3.client('lambda')
         # https://boto3.readthedocs.io/en/docs/reference/services/lambda.html#Lambda.Client.invoke
         response = client.invoke(
@@ -253,8 +254,8 @@ class Lam(object):
         return(ret)
 
     # short name is just the name of the lambda itself
-    def test_lambda_name(self,short_name):
-        lambda_name = '%s-test-%s' % (self.project_name,short_name)
+    def lambda_name(self,short_name):
+        lambda_name = '%s-%s' % (self.project_name,short_name)
         return(lambda_name)
 
     def create_test_lambda(self,name):
@@ -304,98 +305,3 @@ class Lam(object):
 
         functions = [x['FunctionName'] for x in response['Functions']]
         return(name in functions)
-
-    # if an IAM role for testing lambdas doesn't exist, create one
-    def test_user(self):
-        client = boto3.client('iam')
-        project_name = self.project_name
-        self.test_role = '%s-lambda-test-role' % project_name
-        # policy_name = '%s-lambda-test-policy' % project_name
-        if not self.role_exists(self.test_role):
-           print('Creating IAM Role for testing')
-           policy_role = {
-              "Version": "2012-10-17",
-              "Statement": [
-                 {
-                    "Effect": "Allow",
-                    "Principal": {"Service": "lambda.amazonaws.com"},
-                    "Action":"sts:AssumeRole"
-                 },
-                 {
-                    "Effect": "Allow",
-                    "Principal": {"Service": "logs.amazonaws.com"},
-                    "Action": "sts:AssumeRole"
-                 }
-               ]
-           }
-           response = client.create_role(
-               #    Path='string',
-               RoleName=self.test_role,
-               AssumeRolePolicyDocument=json.dumps(policy_role),
-               Description='Role for running unit tests of lambdas'
-           )
-           self.test_role_arn = response['Role']['Arn']
-           policy_policy = {
-                "Version": "2012-10-17",
-                "Statement": [
-                    {
-                        "Sid": "VisualEditor0",
-                        "Effect": "Allow",
-                        "Action": [
-                            "lambda:*",
-                            "lambda:InvokeFunction",
-                            "lambda:ListTags",
-                            "lambda:ListVersionsByFunction",
-                            "lambda:GetFunction",
-                            "lambda:ListAliases",
-                            "logs:*",
-                            "lambda:GetFunctionConfiguration",
-                            "lambda:Invoke",
-                            "lambda:InvokeAsync",
-                            "lambda:GetAlias",
-                            "lambda:GetPolicy"
-                        ],
-                        "Resource": [
-                            "arn:aws:lambda:*:*:function:*",
-                            "arn:aws:logs:*:*:log-group:*:*:*"
-                        ]
-                    }
-                ]
-           }
-           print('creating policy to test IAM role')
-           response = client.create_policy(
-                PolicyName='%s_test_lambda_policy' % self.project_name,
-                PolicyDocument=json.dumps(policy_policy),
-                Description='policy for unit testing of lambdas for %s' % self.project_name
-           )
-           pp.pprint(response)
-           print('attaching policy to test IAM role')
-           response = client.attach_role_policy(
-                RoleName=self.test_role,
-                PolicyArn=response['Policy']['Arn']
-           )
-           pp.pprint(response)
-           print('Created IAM Role for testing')
-        else:
-           # get the arn for the role
-           response = client.get_role(
-                RoleName=self.test_role
-            )
-
-           self.test_role_arn = response['Role']['Arn']
-           print('IAM role for testing already exists')
-
-    # returns boolean, for whether a particular iam role exists
-    def role_exists(self,role):
-        client = boto3.client('iam')
-        response = client.list_roles()
-
-        while response['IsTruncated']:
-            roles = [x['RoleName'] for x in response['Roles']]
-            # pagination
-            if role in roles:
-                return(True)
-            response = client.list_roles(Marker=response['Marker'])
-
-        roles = [x['RoleName'] for x in response['Roles']]
-        return(role in roles)

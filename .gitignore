@@ -4,6 +4,7 @@ muckaround/*
 praw.ini
 data/credentials/*
 artefacts/*
+*/accessKeys.csv
 *.zip
 
 # Byte-compiled / optimized / DLL files

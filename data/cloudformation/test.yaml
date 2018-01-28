@@ -1,0 +1,102 @@
+AWSTemplateFormatVersion: 2010-09-09
+Parameters:
+      botname:
+          Type: String
+          Description: Name of the reddit bot
+Resources:
+      ExecutionRole:
+          Type: "AWS::IAM::Role"
+          Properties:
+             Path : "/"
+             RoleName: !Join [ "-", [ "test", !Ref "botname"] ]
+             Policies:
+              - PolicyName: "CloudwatchLogs"
+                PolicyDocument:
+                   Version   : "2012-10-17"
+                   Statement :
+                      - Action:
+                           - cloudwatch:*
+                           - logs:*
+                           - sns:*
+                        Resource: "*"
+                        Effect: Allow
+              - PolicyName: "SNS"
+                PolicyDocument:
+                  Statement:
+                    - Action:
+                           - sns:*
+                      Resource:
+                           - "*"
+                      Effect: Allow
+            #   - PolicyName: "SQS"
+            #     PolicyDocument:
+            #       Statement:
+            #         - Action:
+            #                - sqs:*
+            #           Resource:
+            #                - "*"
+            #           Effect: Allow
+            #   - PolicyName: "DynamoDB"
+            #     PolicyDocument:
+            #       Statement:
+            #         - Action:
+            #                - dynamodb:*
+            #           Resource:
+            #                - "*"
+            #           Effect: "Allow"
+              - PolicyName: "Lambda"
+                PolicyDocument:
+                  Statement:
+                    - Action:
+                           - lambda:*
+                      Resource:
+                           - "*"
+                      Effect: "Allow"
+              - PolicyName: "KMS"
+                PolicyDocument:
+                  Statement:
+                    - Action:
+                           - kms:*
+                      Resource:
+                           - "*"
+                      Effect: "Allow"
+            #   - PolicyName: "Kinesis"
+            #     PolicyDocument:
+            #       Statement:
+            #         - Action:
+            #                - "kinesis:PutRecord"
+            #                - "kinesis:PutRecords"
+            #                - "kinesis:GetRecords"
+            #                - "kinesis:GetShardIterator"
+            #                - "kinesis:DescribeStream"
+            #                - "kinesis:ListStream"
+            #           Effect: "Allow"
+            #           Resource:
+            #                - "*"
+            #         - Action:
+            #                - "iam:PassRole"
+            #           Effect: "Allow"
+            #           Resource:
+            #                - "*"
+             AssumeRolePolicyDocument :
+                Statement:
+                   - Action:
+                         -  "sts:AssumeRole"
+                     Effect: Allow
+                     Principal:
+                         Service: [ "lambda.amazonaws.com" ]
+                   - Action:
+                         -  "sts:AssumeRole"
+                     Effect: Allow
+                     Principal:
+                         Service: [ "iam.amazonaws.com" ]
+                  #  - Action:
+                  #        -  "sts:AssumeRole"
+                  #    Effect: Allow
+                  #    Principal:
+                  #        Service: [ "sns.amazonaws.com" ]
+                   - Action:
+                         -  "sts:AssumeRole"
+                     Effect: Allow
+                     Principal:
+                         Service: [ "logs.amazonaws.com" ]

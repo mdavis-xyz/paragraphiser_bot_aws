@@ -3,6 +3,7 @@ import logging
 logger = None # will be initialised in handler, then used as global var
 import pprint as pp
 import praw
+import boto3
 
 # secret stuff
 # https://stackoverflow.com/questions/29372278/aws-lambda-how-to-store-secret-to-external-api#29600478
@@ -63,6 +64,18 @@ def init_praw():
     logger.info('ok, that didn\'t raise an exception')
     assert(False)
 
+def execute(event,context):
+    return("Not yet implemented")
+
+def unit_test(event,context):
+    global logger
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
+    logger.info('Running unit tests')
+    reddit = init_praw()
+    print("Sucessfully created reddit instance")
+
+
 def lambda_handler(event, context):
     global logger
     logger = logging.getLogger()
@@ -72,12 +85,11 @@ def lambda_handler(event, context):
 
     reddit = init_praw()
 
-    return('OK')
+    if (event != None) and \
+       ('Test Run' in event) and \
+       (event['Test Run'] == True):
+           ret_val = unit_test(event,context)
+    else:
+        ret_val = real(event,context)
 
-def unit_test(event,context):
-    global logger
-    logger = logging.getLogger()
-    logger.setLevel(logging.INFO)
-    logger.info('Running unit tests')
-    reddit = init_praw()
-    print("Sucessfully created reddit instance")
+    return(ret_val)

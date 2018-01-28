@@ -22,7 +22,13 @@ pip install nose
 pip install boto3
 pip install praw
 
-cp $1/credentials ./ -r
+rm -rf credentials
+mkdir credentials
+for F in client_id.txt client_secret.dat password.dat username.txt user_agent.txt
+do
+   echo "Copying file" $F
+   cp $1/credentials/$F ./credentials/$F
+done
 
 deactivate
 

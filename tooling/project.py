@@ -1,5 +1,6 @@
 from .lam import Lam
 from .cloudformation import CloudFormation
+from tooling.colour import warn, error, emph, good
 
 class Project(object):
     # TODO: add boto credentials
@@ -13,5 +14,9 @@ class Project(object):
         self.cf = CloudFormation(project_name,cloudformation_dir,code_bucket)
 
     def the_lot(self,skip_zip, skip_build, skip_upload, skip_test):
-        self.lam.the_lot(skip_zip,skip_build, skip_upload,skip_test)
+        self.lam.the_lot(skip_zip,skip_build, skip_upload)
         self.cf.deploy()
+        if not skip_test:
+            self.lam.test()
+        else:
+            print(warn("Skipping testing of lambda"))

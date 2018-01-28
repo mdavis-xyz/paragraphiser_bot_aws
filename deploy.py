@@ -19,7 +19,7 @@ def arguments(argv):
                            type=str,
                            required=True
                            )
-    parser.add_argument('-r', '--skip-build',
+    parser.add_argument('-b', '--skip-build',
                        help="Do not rebuild lambda environments",
                        action="store_true"
                        )
@@ -31,7 +31,13 @@ def arguments(argv):
 
 
     parser.add_argument('-u', '--skip-zip-upload',
-                       help="Do not upload lambda lambdas",
+                       help="Do not upload lambda zips",
+                       action="store_true"
+                       )
+
+
+    parser.add_argument('-t', '--skip-lambda-test',
+                       help="Do not test lambdas",
                        action="store_true"
                        )
 
@@ -54,7 +60,7 @@ def main(argv):
     region = 'ap-southeast-2'
 
     prj = Project(project_name,region,lambda_dir,lib_dir,cloudformation_dir,data_dir,code_bucket)
-    prj.the_lot(v.skip_zip, v.skip_build, v.skip_zip_upload)
+    prj.the_lot(v.skip_zip, v.skip_build, v.skip_zip_upload,v.skip_lambda_test)
     print(good('Done'))
 
 

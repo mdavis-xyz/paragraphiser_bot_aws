@@ -97,8 +97,6 @@ class CloudFormation(object):
                 exit(1)
 
 
-            assert(False) # TODO
-
 # returns true iff this stack exists
 # this function handles pagination by boto
 def stack_exists(stack_name):

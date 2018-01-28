@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Usage: 1st argument is location of lib directory
+# Usage: 1st argument is the data directory
 
 set -e # exit if a single command fails
 
@@ -22,7 +22,7 @@ pip install nose
 pip install boto3
 pip install praw
 
-cp $1/credentials/praw.ini ./
+cp $1/credentials ./ -r
 
 deactivate
 

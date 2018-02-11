@@ -15,8 +15,6 @@ class Project(object):
 
     def the_lot(self,skip_zip, skip_build, skip_upload, skip_test):
         self.lam.the_lot(skip_zip,skip_build, skip_upload)
-        self.cf.deploy()
-        if not skip_test:
-            self.lam.test()
-        else:
-            print(warn("Skipping testing of lambda"))
+        self.cf.deploy(self.lam.versions)
+        self.lam.test_lambdas(skip_test,self.cf.stack_name)
+        print(good('Finished everything!'))

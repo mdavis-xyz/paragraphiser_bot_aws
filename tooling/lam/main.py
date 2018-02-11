@@ -43,6 +43,9 @@ class Lam(object):
 
         if skip_upload:
             print(warn('Skipping uploading of lambdas'))
+            print('using latest versions of zips currently in S3')
+            lambdas = self.list_local_lambdas()
+            versions = [{'name':lam,'S3Version':self.latest_version(lam)} for lam in lambdas]
         else:
 
             # check code bucket exists
@@ -60,12 +63,18 @@ class Lam(object):
                 }
                 )
 
-            self.do_work('upload',self.upload_one)
+            # list of {'name':x,'return_val':s3version}
+            results = self.do_work('upload',self.upload_one)
+            versions = [{'name':x['name'],'S3Version':x['return_val']} for x in results]
 
-    def test_lambdas(skip_test):
+        assert(not any([x['S3Version'] == None for x in versions]))
+        self.versions = versions
+
+    def test_lambdas(self,skip_test,stack_name):
         if skip_test:
             print(warn('Skipping testing of lambdas'))
         else:
+            self.stack_name = stack_name
             self.do_work('test',self.test_one)
 
 
@@ -85,8 +94,12 @@ class Lam(object):
             results = p.starmap(self.safe_fail, args)
             results = [{'name':name,
                        'msg':result['msg'],
-                       'Success':result['Success']}
+                       'Success':result['Success'],
+                       'return_val':None if ('return_val' not in result) else result['return_val']
+                       }
                        for (name,result) in zip(lambdas,results)]
+
+
 
             failed = [result for result in results if not result['Success']]
             if len(failed) > 0:
@@ -100,7 +113,7 @@ class Lam(object):
                 exit(1)
             else:
                 print(good('Successfully completed %s for all lambdas' % step))
-
+                return(results)
 
     def safe_fail(self,func,name):
         try:
@@ -156,11 +169,13 @@ class Lam(object):
         with zipfile.ZipFile(zip_fname, "w", zipfile.ZIP_DEFLATED) as zf:
             zf.write(os.path.join(this_lambda_dir,"main.py"), "main.py")
             # TODO: deal with multiple files in root directory
-            cred_dir = os.path.join(this_lambda_dir,"credentials")
-            for dirname, subdirs, files in os.walk(cred_dir):
+            incl_dir = os.path.join(this_lambda_dir,"include")
+            for dirname, subdirs, files in os.walk(incl_dir):
+                # print('There are %d files in include folder' % len(files))
                 for filename in files:
                     absname = os.path.abspath(os.path.join(dirname, filename))
-                    path_in_zip = os.path.join("credentials",filename)
+                    path_in_zip = filename
+                    # print('Adding file %s to zip %s' % (absname,path_in_zip))
                     zf.write(absname, path_in_zip)
             for lib in ['lib','lib64']:
                 # TODO: don't hard code 3.6
@@ -195,10 +210,67 @@ class Lam(object):
 
         return(ret)
 
+    def latest_version(self,lambda_name):
+        key = self.s3_key(lambda_name)
+
+        # s3 = boto3.resource('s3')
+        # object_summary = s3.ObjectSummary(self.code_bucket,key)
+        # version = object_summary.Version()
+
+        client = boto3.client('s3')
+
+        print('Getting version info for zip %s from S3' % lambda_name)
+        response = client.list_object_versions(
+            Bucket=self.code_bucket,
+            # KeyMarker=key, # won't work if we just list versions for one key
+            MaxKeys=1 # deleted keys show up for some reason
+        )
+
+        if 'Versions' not in response:
+            pp.pprint(response)
+
+        versions = response['Versions']
+
+        while(response['IsTruncated']):
+            # pp.pprint(response)
+            print('Getting next page of version info for zip %s from S3' % lambda_name)
+            assert('NextVersionIdMarker' in response)
+            response = client.list_object_versions(
+                Bucket=self.code_bucket,
+                KeyMarker=response['NextKeyMarker'],
+                MaxKeys=1, # deleted keys show up for some reason
+                VersionIdMarker=response['NextVersionIdMarker']
+            )
+            versions.extend(response['Versions'])
+
+        print('Got all versions, now finding the most recent for %s' % key)
+        version_ids = [v['VersionId'] for v in versions if (v['IsLatest'] and (v['Key'] == key))]
+        if len(version_ids) == 0:
+            print(error('Couldn\'t find zip %s in S3 bucket %s. Try again without -u' % (key,self.code_bucket)))
+            exit(1)
+        elif len(version_ids) != 1:
+            print('Versions:')
+            pp.pprint(versions)
+            print('Key: %s' % key)
+            print('version_ids:')
+            pp.pprint(version_ids)
+
+        assert(len(version_ids) == 1)
+
+        version = version_ids[0]
+        print('Latest version of zip for %s is %s' % (lambda_name,version))
+
+        assert(version != None)
+
+        return(version)
+
+    def s3_key(self,lambda_name):
+        return('%s.zip' % lambda_name)
+
     def upload_one(self,name):
         zip_fname = os.path.join(self.lambda_dir,name,"lambda.zip")
 
-        key = '%s.zip' % name
+        key = self.s3_key(name)
 
         client = boto3.client('s3')
 
@@ -212,19 +284,37 @@ class Lam(object):
             )
             print('   uploaded zip of %s to S3' % name)
 
-        ret = {'Success':True,'msg':'Uploaded sucessfully'}
+            version = response['VersionId']
+
+        ret = {'Success':True,'msg':'Uploaded sucessfully','return_val':version}
 
         return(ret)
 
 
+    # takes in a short lambda name
+    # returns the long name of the deployed lambda
+    # which includes stack name and a random string
+    def local_name_to_remote(self,short):
+        client = boto3.client('cloudformation')
+        response = client.describe_stack_resource(
+            StackName=self.stack_name,
+            LogicalResourceId=short
+        )
 
-    def invoke_test_lambda(self,name):
+        long_name = response['StackResourceDetail']['PhysicalResourceId']
+
+        print('Long name for lambda %s is %s' % (short,long_name))
+        return(long_name)
+
+    def test_one(self,name):
         print('   invoking test lambda for %s' % name)
         client = boto3.client('lambda')
+        remote_name = self.local_name_to_remote(name)
         # https://boto3.readthedocs.io/en/docs/reference/services/lambda.html#Lambda.Client.invoke
         response = client.invoke(
-            FunctionName=self.test_lambda_name(name),
+            FunctionName=remote_name,
             InvocationType='RequestResponse',
+            Payload=json.dumps({'unitTest':True}).encode(),
             LogType='Tail'
         )
 
@@ -257,40 +347,6 @@ class Lam(object):
     def lambda_name(self,short_name):
         lambda_name = '%s-%s' % (self.project_name,short_name)
         return(lambda_name)
-
-    def create_test_lambda(self,name):
-
-        key = '%s.zip' % name
-
-        lambda_name = self.test_lambda_name(name)
-
-        client = boto3.client('lambda')
-
-        if self.lambda_exists(lambda_name):
-            response = client.update_function_code(
-                FunctionName=lambda_name,
-                S3Bucket=self.code_bucket,
-                S3Key=key
-            )
-        else:
-            # create new lambda
-            response = client.create_function(
-                FunctionName=lambda_name,
-                Runtime='python3.6', # TODO: add a variable somehow
-                Role=self.test_role_arn,
-                Handler='main.unit_test',
-                Code={
-                    'S3Bucket': self.code_bucket,
-                    'S3Key': key
-                },
-                Description='test lambda for %s' % name,
-                Timeout=200,
-                MemorySize=128
-            )
-
-        ret = {'Success':True,'msg':'Uploaded sucessfully'}
-
-        return(ret)
 
     # check whether a lambda function exists under a particular name
     def lambda_exists(self,name):

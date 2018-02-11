@@ -18,17 +18,15 @@ fi
 rm -rf env
 virtualenv -p /usr/bin/python3.6 ./env
 . env/bin/activate
-pip install nose
+# pip install nose
 pip install boto3
 pip install praw
 
-rm -rf credentials
-mkdir credentials
-for F in client_id.txt client_secret.dat password.dat username.txt user_agent.txt
-do
-   echo "Copying file" $F
-   cp $1/credentials/$F ./credentials/$F
-done
+rm -rf include
+mkdir include
+cp $1/credentials/praw.ini include/praw.ini
+cp $1/lib/common.py include/common.py
+cp $1/lib/scheduling.py include/scheduling.py
 
 deactivate
 

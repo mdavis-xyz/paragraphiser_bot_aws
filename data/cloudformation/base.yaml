@@ -6,6 +6,17 @@ Parameters:
       codebucket:
           Type: String
           Description: S3 bucket where lambda code should be saved
+      checkForNewS3Version:
+          Type: String
+          Description: Version of the zip for checkForNew
+      checkOldOneS3Version:
+          Type: String
+          Description: Version of the zip for checkOldOne
+      poll15S3Version:
+          Type: String
+          Description: Version of the zip for poll15
+
+
 Resources:
       ExecutionRole:
           Type: "AWS::IAM::Role"
@@ -20,7 +31,6 @@ Resources:
                       - Action:
                            - cloudwatch:*
                            - logs:*
-                           - sns:*
                         Resource: "*"
                         Effect: Allow
               - PolicyName: "S3"
@@ -46,14 +56,6 @@ Resources:
                        Resource:
                            - "arn:aws:s3:::tenergy-summary-b/*"
                        Effect: Allow
-              - PolicyName: "SNS"
-                PolicyDocument:
-                  Statement:
-                    - Action:
-                           - sns:*
-                      Resource:
-                           - "*"
-                      Effect: Allow
               - PolicyName: "SQS"
                 PolicyDocument:
                   Statement:
@@ -78,24 +80,6 @@ Resources:
                       Resource:
                            - "*"
                       Effect: "Allow"
-              - PolicyName: "Kinesis"
-                PolicyDocument:
-                  Statement:
-                    - Action:
-                           - "kinesis:PutRecord"
-                           - "kinesis:PutRecords"
-                           - "kinesis:GetRecords"
-                           - "kinesis:GetShardIterator"
-                           - "kinesis:DescribeStream"
-                           - "kinesis:ListStream"
-                      Effect: "Allow"
-                      Resource:
-                           - "*"
-                    - Action:
-                           - "iam:PassRole"
-                      Effect: "Allow"
-                      Resource:
-                           - "*"
              AssumeRolePolicyDocument :
                 Statement:
                    - Action:
@@ -113,14 +97,135 @@ Resources:
                      Effect: Allow
                      Principal:
                          Service: [ "logs.ap-southeast-2.amazonaws.com" ]
-      enumerateposts:
+      postHistoryTable:
+                Type: "AWS::DynamoDB::Table"
+                Properties:
+                   AttributeDefinitions:
+                       - AttributeName: "post_id"
+                         AttributeType: "S"
+                   KeySchema:
+                       - AttributeName: "post_id"
+                         KeyType:       "HASH"
+                   ProvisionedThroughput:
+                         ReadCapacityUnits: 5
+                         WriteCapacityUnits: 5
+      delayTable:
+                Type: "AWS::DynamoDB::Table"
+                Properties:
+                   AttributeDefinitions:
+                       - AttributeName: "time"
+                         AttributeType: "N"
+                   KeySchema:
+                       - AttributeName: "time"
+                         KeyType:       "HASH"
+                   ProvisionedThroughput:
+                         ReadCapacityUnits: 5
+                         WriteCapacityUnits: 5
+      triggerCheckForNew:
+          Type: "AWS::Events::Rule"
+          Properties:
+              Description: "ScheduledRule"
+              ScheduleExpression: "cron(0/10 * * * ? *)"
+              State: "ENABLED"
+              Targets:
+                -
+                  Arn:
+                     Fn::GetAtt: ["checkForNew", "Arn"]
+                  Id: "trigger_checkForNew"
+      permitTriggerCheckForNew:
+          Type: "AWS::Lambda::Permission"
+          Properties:
+             FunctionName:
+                Ref: "checkForNew"
+             Action: "lambda:InvokeFunction"
+             Principal: "events.amazonaws.com"
+             SourceArn:
+                Fn::GetAtt: [ "triggerCheckForNew", "Arn"]
+      checkForNew:
           Type: AWS::Lambda::Function
           Properties:
             Code:
               S3Bucket: !Ref "codebucket"
-              S3Key: enumerateposts.zip
+              S3Key: checkForNew.zip
+              S3ObjectVersion: !Ref "checkForNewS3Version"
             Handler: main.lambda_handler
             Runtime: python3.6
             Timeout: 300
             Role:
                 "Fn::GetAtt": ["ExecutionRole", "Arn"]
+            Environment:
+                Variables:
+                   dry_run: False
+                   num_to_scan: 50
+                   delay_table:
+                       Ref: "delayTable"
+                   post_history_table:
+                       Ref: "postHistoryTable"
+                   delay_queue:
+                       Ref: "delayQueue"
+      checkOldOne:
+          Type: AWS::Lambda::Function
+          Properties:
+            Code:
+              S3Bucket: !Ref "codebucket"
+              S3Key: checkOldOne.zip
+              S3ObjectVersion: !Ref "checkOldOneS3Version"
+            Handler: main.lambda_handler
+            Runtime: python3.6
+            Timeout: 300
+            Role:
+                "Fn::GetAtt": ["ExecutionRole", "Arn"]
+            Environment:
+                Variables:
+                   dry_run: False
+                   post_history_table:
+                       Ref: "postHistoryTable"
+                   delay_queue:
+                       Ref: "delayQueue"
+      triggerPoll15:
+          Type: "AWS::Events::Rule"
+          Properties:
+              Description: "ScheduledRule"
+              ScheduleExpression: "cron(0/15 * * * ? *)"
+              State: "ENABLED"
+              Targets:
+                -
+                  Arn:
+                     Fn::GetAtt: ["poll15", "Arn"]
+                  Id: "trigger_poll15"
+      permitTriggerPoll15:
+          Type: "AWS::Lambda::Permission"
+          Properties:
+             FunctionName:
+                Ref: "poll15"
+             Action: "lambda:InvokeFunction"
+             Principal: "events.amazonaws.com"
+             SourceArn:
+                Fn::GetAtt: [ "triggerPoll15", "Arn"]
+      poll15:
+          Type: AWS::Lambda::Function
+          Properties:
+            Code:
+              S3Bucket: !Ref "codebucket"
+              S3Key: poll15.zip
+              S3ObjectVersion: !Ref "poll15S3Version"
+            Handler: main.lambda_handler
+            Runtime: python3.6
+            Timeout: 300
+            Role:
+                "Fn::GetAtt": ["ExecutionRole", "Arn"]
+            Environment:
+                Variables:
+                   dry_run: False
+                   post_history_table:
+                       Ref: "postHistoryTable"
+                   delay_table:
+                       Ref: "delayTable"
+                   delay_queue:
+                       Ref: "delayQueue"
+                   bot_name:
+                       !Ref "botname"
+      delayQueue:
+         Type: "AWS::SQS::Queue"
+         Properties:
+           FifoQueue: False

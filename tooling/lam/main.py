@@ -11,6 +11,7 @@ import pprint as pp
 import zipfile
 import json
 import base64
+import sys
 
 class Lam(object):
 
@@ -233,7 +234,9 @@ class Lam(object):
 
         while(response['IsTruncated']):
             # pp.pprint(response)
-            print('Getting next page of version info for zip %s from S3' % lambda_name)
+            sys.stdout.write('.') # print('.') but without a newline
+            sys.stdout.flush()
+            # print('Getting next page of version info for zip %s from S3' % lambda_name)
             assert('NextVersionIdMarker' in response)
             response = client.list_object_versions(
                 Bucket=self.code_bucket,

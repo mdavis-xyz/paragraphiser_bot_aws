@@ -145,13 +145,6 @@ def fetch_15():
             print('Sending SQS message for post %s with delay %d' % (post_id,delay))
             send_message(post_id,delay,url=queue_url)
 
-    print('Deleting those items from dynamodb table')
-    for item in items:
-        delete_items(items)
-
-        # dynamo limit is 5 per second for this table
-        # slowing that down a lot, just to be sure
-        time.sleep(4/5)
 
 # performs a dynamodb query for all items with key 'time'
 # of value time_until or less
@@ -189,20 +182,3 @@ def table_query_unpaginated(time_until):
         items.extend(response['Items'])
 
     return(items)
-
-def delete_item(item):
-    client = boto3.client('dynamodb')
-
-    table_name = os.environ['delay_table']
-
-    response = client.delete_item(
-        TableName=table_name,
-        Key={
-            'hash': {
-                'S': hash_key_val
-            },
-            'time': {
-                'N': item['time']['N']
-            }
-        }
-    )

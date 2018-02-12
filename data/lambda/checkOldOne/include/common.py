@@ -1,4 +1,4 @@
-import praw
+# import praw
 import os
 import pprint as pp
 import boto3

@@ -134,7 +134,7 @@ class CloudFormation(object):
         else:
             print('Stack %s does not exist. Creating it' % self.stack_name)
             # create stack
-            with open(join(self.cloudformation_dir,fname),"rb") as f:
+            with open(fname,"rb") as f:
                 response = client.create_stack(
                     StackName=self.stack_name,
                     TemplateBody=f.read().decode("utf-8"),

@@ -1,4 +1,3 @@
-import praw
 import os
 import pprint as pp
 import boto3
@@ -17,5 +16,5 @@ def lambda_handler(event,contex):
         return(check_latest_batch(event))
 
 def check_latest_batch(event):
-    print('Event:')
-    pp.pprint(event)
+    scheduling.fetch_15()
+    print('Finished moving the latest batch of checks from dynamo to SQS')

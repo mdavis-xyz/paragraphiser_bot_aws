@@ -15,6 +15,9 @@ Parameters:
       poll15S3Version:
           Type: String
           Description: Version of the zip for poll15
+      errorHandlerS3Version:
+          Type: String
+          Description: Version of the zip for errorHandler
 
 
 Resources:
@@ -97,6 +100,8 @@ Resources:
                      Effect: Allow
                      Principal:
                          Service: [ "logs.ap-southeast-2.amazonaws.com" ]
+
+      # this table contains data about each post that was at some point eligible
       postHistoryTable:
                 Type: "AWS::DynamoDB::Table"
                 Properties:
@@ -109,18 +114,33 @@ Resources:
                    ProvisionedThroughput:
                          ReadCapacityUnits: 5
                          WriteCapacityUnits: 5
+
+      # this table contains a list of timestamps for the future, and post ids
+      # at those times we will go back and check the original post and our comment
       delayTable:
                 Type: "AWS::DynamoDB::Table"
                 Properties:
                    AttributeDefinitions:
                        - AttributeName: "time"
                          AttributeType: "N"
+                       - AttributeName: "hash"
+                         AttributeType: "S"
                    KeySchema:
-                       - AttributeName: "time"
+                       # Apparently you can't have a dynamo table with just a
+                       # sort key. So I'll add a hash key, which will only have
+                       # one value of 0
+                       - AttributeName: "hash"
                          KeyType:       "HASH"
+                       - AttributeName: "time"
+                         KeyType:       "RANGE"
                    ProvisionedThroughput:
                          ReadCapacityUnits: 5
                          WriteCapacityUnits: 5
+
+      #######################
+      # checkForNew
+      # this lambda will poll reddit for new posts and comment if eligible
+      #######################
       triggerCheckForNew:
           Type: "AWS::Events::Rule"
           Properties:
@@ -163,25 +183,13 @@ Resources:
                        Ref: "postHistoryTable"
                    delay_queue:
                        Ref: "delayQueue"
-      checkOldOne:
-          Type: AWS::Lambda::Function
-          Properties:
-            Code:
-              S3Bucket: !Ref "codebucket"
-              S3Key: checkOldOne.zip
-              S3ObjectVersion: !Ref "checkOldOneS3Version"
-            Handler: main.lambda_handler
-            Runtime: python3.6
-            Timeout: 300
-            Role:
-                "Fn::GetAtt": ["ExecutionRole", "Arn"]
-            Environment:
-                Variables:
-                   dry_run: False
-                   post_history_table:
-                       Ref: "postHistoryTable"
-                   delay_queue:
-                       Ref: "delayQueue"
+
+      #######################
+      # poll15
+      # this lambda will poll dynamodb every 15 minutes,
+      # then will take all timestamps <= 15 minutes into the future,
+      # and send them into SQS, for checkOldOne to check
+      #######################
       triggerPoll15:
           Type: "AWS::Events::Rule"
           Properties:
@@ -225,7 +233,87 @@ Resources:
                        Ref: "delayQueue"
                    bot_name:
                        !Ref "botname"
+
+      #######################
+      # checkOldOne
+      # This function checks posts that were eligible to see if they
+      # still are, and what reaction we've got to our post
+      #######################
       delayQueue:
          Type: "AWS::SQS::Queue"
+         # Properties:
+         #   FifoQueue: False
+      checkOldOne:
+          Type: AWS::Lambda::Function
+          Properties:
+            Code:
+              S3Bucket: !Ref "codebucket"
+              S3Key: checkOldOne.zip
+              S3ObjectVersion: !Ref "checkOldOneS3Version"
+            Handler: main.lambda_handler
+            Runtime: python3.6
+            Timeout: 300
+            Role:
+                "Fn::GetAtt": ["ExecutionRole", "Arn"]
+            Environment:
+                Variables:
+                   dry_run: False
+                   post_history_table:
+                       Ref: "postHistoryTable"
+      sqsCanInvokeCheckOldOne:
+          Type: "AWS::Lambda::Permission"
+          Properties:
+              Action: "lambda:InvokeFunction"
+              Principal: "sqs.amazonaws.com"
+              SourceArn:
+                 "Fn::GetAtt" : ["delayQueue", "Arn"]
+              FunctionName:
+                 "Fn::GetAtt" : ["checkOldOne", "Arn"]
+          DependsOn:
+              - "checkOldOne"
+              - "delayQueue"
+
+      #######################
+      # errorHandler
+      # If any lambda fails, this will send you a text message
+      # with sensible logic applied
+      #######################
+      errorHandler:
+          Type: AWS::Lambda::Function
+          Properties:
+            Code:
+              S3Bucket: !Ref "codebucket"
+              S3Key: errorHandler.zip
+              S3ObjectVersion: !Ref "errorHandlerS3Version"
+            Handler: main.lambda_handler
+            Runtime: python3.6
+            Timeout: 60
+            Role:
+                "Fn::GetAtt": ["ExecutionRole", "Arn"]
+            Environment:
+                Variables:
+                   dry_run:
+                      False
+                   phone_number:
+                      "+61415762868"
+      errorTopic:
+         Type: "AWS::SNS::Topic"
          Properties:
-           FifoQueue: False
+           Subscription:
+             - Endpoint:
+                   "Fn::GetAtt": ["errorHandler", "Arn"]
+               Protocol:
+                   "lambda"
+      errorAlarm:
+         Type: "AWS::CloudWatch::Alarm"
+         Properties:
+           ActionsEnabled: True # not sure
+           AlarmActions:
+               - Ref: "errorTopic"
+           ComparisonOperator: "GreaterThanOrEqualToThreshold"
+           EvaluationPeriods: 1
+           MetricName: "Errors"
+           Namespace: "AWS/Lambda"
+           Period: 60 # minimum
+           Statistic: Sum
+           Threshold: 1

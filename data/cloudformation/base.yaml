@@ -18,6 +18,9 @@ Parameters:
       errorHandlerS3Version:
           Type: String
           Description: Version of the zip for errorHandler
+      failerS3Version:
+          Type: String
+          Description: Version of the zip for failerHandler
 
 
 Resources:
@@ -183,6 +186,26 @@ Resources:
                        Ref: "postHistoryTable"
                    delay_queue:
                        Ref: "delayQueue"
+      errorAlarmCheckForNew:
+         Type: "AWS::CloudWatch::Alarm"
+         Properties:
+           ActionsEnabled: True # not sure
+           AlarmDescription:
+               "Unable to check whether new posts are eligible"
+           AlarmActions:
+               - Ref: "errorTopic"
+           ComparisonOperator: "GreaterThanOrEqualToThreshold"
+           EvaluationPeriods: 1
+           MetricName: "Errors"
+           Namespace: "AWS/Lambda"
+           Dimensions:
+               - Name: "FunctionName"
+                 Value: 
+                     Ref: "checkForNew"
+           Period: 60 # minimum
+           Statistic: Sum
+           Threshold: 1
+           TreatMissingData: "notBreaching"
 
       #######################
       # poll15
@@ -233,6 +256,26 @@ Resources:
                        Ref: "delayQueue"
                    bot_name:
                        !Ref "botname"
+      errorAlarmPoll15:
+         Type: "AWS::CloudWatch::Alarm"
+         Properties:
+           ActionsEnabled: True # not sure
+           AlarmDescription:
+               "Unable to schedule checks for previous comments by this bot"
+           AlarmActions:
+               - Ref: "errorTopic"
+           ComparisonOperator: "GreaterThanOrEqualToThreshold"
+           EvaluationPeriods: 1
+           MetricName: "Errors"
+           Namespace: "AWS/Lambda"
+           Dimensions:
+               - Name: "FunctionName"
+                 Value: 
+                     Ref: "poll15"
+           Period: 60 # minimum
+           Statistic: Sum
+           Threshold: 1
+           TreatMissingData: "notBreaching"
 
       #######################
       # checkOldOne
@@ -272,6 +315,26 @@ Resources:
           DependsOn:
               - "checkOldOne"
               - "delayQueue"
+      errorAlarmCheckOldOne:
+         Type: "AWS::CloudWatch::Alarm"
+         Properties:
+           ActionsEnabled: True # not sure
+           AlarmDescription:
+               "Unable to check reaction to a previous comment by this bot"
+           AlarmActions:
+               - Ref: "errorTopic"
+           ComparisonOperator: "GreaterThanOrEqualToThreshold"
+           EvaluationPeriods: 1
+           MetricName: "Errors"
+           Namespace: "AWS/Lambda"
+           Dimensions:
+               - Name: "FunctionName"
+                 Value: 
+                     Ref: "checkOldOne"
+           Period: 60 # minimum
+           Statistic: Sum
+           Threshold: 1
+           TreatMissingData: "notBreaching"
 
       #######################
       # errorHandler
@@ -296,24 +359,83 @@ Resources:
                       False
                    phone_number:
                       "+61415762868"
-      errorTopic:
-         Type: "AWS::SNS::Topic"
-         Properties:
-           Subscription:
-             - Endpoint:
-                   "Fn::GetAtt": ["errorHandler", "Arn"]
-               Protocol:
-                   "lambda"
-      errorAlarm:
+                   bot_name:
+                       Ref: "botname"   
+                   error_table:
+                       Ref: "errorHistoryTable"
+                   stack_name:
+                       Ref: "AWS::StackName"
+      failer:
+          Type: AWS::Lambda::Function
+          Properties:
+            Code:
+              S3Bucket: !Ref "codebucket"
+              S3Key: failer.zip
+              S3ObjectVersion: !Ref "failerS3Version"
+            Handler: main.lambda_handler
+            Runtime: python3.6
+            Timeout: 60
+            Role:
+                "Fn::GetAtt": ["ExecutionRole", "Arn"]
+      errorAlarmFailer:
          Type: "AWS::CloudWatch::Alarm"
          Properties:
            ActionsEnabled: True # not sure
+           AlarmDescription:
+               "test failure"
            AlarmActions:
                - Ref: "errorTopic"
            ComparisonOperator: "GreaterThanOrEqualToThreshold"
            EvaluationPeriods: 1
            MetricName: "Errors"
            Namespace: "AWS/Lambda"
+           Dimensions:
+               - Name: "FunctionName"
+                 Value: 
+                     Ref: "failer"
            Period: 60 # minimum
            Statistic: Sum
            Threshold: 1
+           TreatMissingData: "notBreaching"
+
+      errorTopic:
+          Type: "AWS::SNS::Topic"
+          Properties:
+              Subscription:
+                 - Endpoint:
+                       "Fn::GetAtt": ["errorHandler", "Arn"]
+                   Protocol:
+                       "lambda"
+          DependsOn:
+              - "errorHandler"        
+      permitTriggerErrorHandler:
+          Type: "AWS::Lambda::Permission"
+          Properties:
+             FunctionName:
+                "Fn::GetAtt": ["errorHandler", "Arn"]
+             Action: "lambda:InvokeFunction"
+             Principal: "sns.amazonaws.com"
+             SourceArn:
+                Ref: "errorTopic"
+          DependsOn:
+              - "errorHandler"
+              - "errorTopic"
+      # if something goes wrong, we send an sms
+      # but don't send a second message for the same error until after the stack is updated
+      # this table stores that information
+      errorHistoryTable:
+                Type: "AWS::DynamoDB::Table"
+                Properties:
+                   AttributeDefinitions:
+                       - AttributeName: "hash" # can't have a table with just a sort
+                         AttributeType: "S"
+                       - AttributeName: "time"
+                         AttributeType: "N"
+                   KeySchema:
+                       - AttributeName: "hash"
+                         KeyType:       "HASH"
+                       - AttributeName: "time"
+                         KeyType:       "RANGE"
+                   ProvisionedThroughput:
+                         ReadCapacityUnits: 5
+                         WriteCapacityUnits: 5

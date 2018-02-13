@@ -321,7 +321,7 @@ class Lam(object):
             LogType='Tail'
         )
 
-        pp.pprint(response)
+        #pp.pprint(response)
 
         if (response['StatusCode'] == 200):
 

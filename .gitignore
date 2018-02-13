@@ -6,6 +6,7 @@ data/credentials/*
 artefacts/*
 */accessKeys.csv
 *.zip
+data/lambda/*/include/*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -25,8 +25,8 @@ pip install boto3
 rm -rf include
 mkdir include
 # cp $1/credentials/praw.ini include/praw.ini
-cp $1/lib/common.py include/common.py
-cp $1/lib/scheduling.py include/scheduling.py
+cp $1/util/common.py include/common.py
+cp $1/util/scheduling.py include/scheduling.py
 
 deactivate
 

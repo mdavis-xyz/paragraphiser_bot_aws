@@ -8,9 +8,9 @@ import random
 max_delay = 15*60
 SEC_PER_MIN = 60
 MIN_PER_H = 60
-S_PER_H = SEC_PER_MIN * MIN_PER_H
+SEC_PER_H = SEC_PER_MIN * MIN_PER_H
 H_PER_DAY = 24
-SEC_PER_H = H_PER_DAY * SEC_PER_H
+SEC_PER_DAY = H_PER_DAY * SEC_PER_H
 
 # Apparently you can't have a dynamo table with just a
 # sort key. So I'll add a hash key, which will only have

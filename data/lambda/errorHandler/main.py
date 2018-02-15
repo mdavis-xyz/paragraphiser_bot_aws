@@ -38,13 +38,29 @@ def error_handler(logger,event):
     for rec in event['Records']:
         logger.info('record is:')
         logger.info(pp.pformat(event))
-        msg_core = rec['Sns']['Message']['AlarmDescription']
-        msg = 'A problem has occured with the %s reddit bot.\n\n%s' % (bot_name,msg_core)
-        send_sms(logger,msg)
+        msg_core = json.loads(rec['Sns']['Message'])['AlarmDescription']
+        if not msg_already_sent(msg_core):
+            print('New message: %s' % msg_core)
+            msg = 'A problem has occured with your %s reddit bot.\n\n%s' % (bot_name,msg_core)
+            send_sms(logger,msg)
+            save_to_table(msg_core)
+        else:
+            print('Error message: %s' % msg_core)
+            print('We\'ve already sent that message. Don\'t do anything')
         
+def msg_already_sent(msg):
+    table_name = os.environ['error_table']
+    stack_timestamp()
+    return(False)
+
+def save_to_table(msg):
+    table_name = os.environ['error_table']
+    stack_timestamp()
+    # TODO
+    print('haven\'t implemented this')
 
 def send_sms(logger,msg):
-    phone_number = os.environ('phone_number')
+    phone_number = os.environ['phone_number']
 
     client = boto3.client('sns')
    
@@ -56,7 +72,7 @@ def send_sms(logger,msg):
         MessageAttributes={
             'AWS.SNS.SMS.SenderID':{
                 'DataType':'String',
-                'StringValue':msg
+                'StringValue':'MyRedditBot'
             }
         }
     )

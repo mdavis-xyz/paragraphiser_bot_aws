@@ -70,6 +70,22 @@ Resources:
                       Resource:
                            - "*"
                       Effect: Allow
+              - PolicyName: "SNS_SMS"
+                PolicyDocument:
+                  Statement:
+                    - Action:
+                           - SNS:Publish
+                      Resource:
+                           - "*"
+                      Effect: Allow
+              - PolicyName: "Cloudformation_Read_Only"
+                PolicyDocument:
+                  Statement:
+                    - Action:
+                           - cloudformation:DescribeStacks
+                      Resource:
+                           - "*"
+                      Effect: Allow
               - PolicyName: "DynamoDB"
                 PolicyDocument:
                   Statement:
@@ -355,8 +371,6 @@ Resources:
                 "Fn::GetAtt": ["ExecutionRole", "Arn"]
             Environment:
                 Variables:
-                   dry_run:
-                      False
                    phone_number:
                       "+61415762868"
                    bot_name:

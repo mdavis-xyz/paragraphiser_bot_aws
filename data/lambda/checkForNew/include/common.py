@@ -16,7 +16,7 @@ def max_paragraph_size(text):
 
 
 def generate_reply(submission):
-    reply_template_fname = './data/reply_template.md'
+    reply_template_fname = './replyTemplateNew.md'
     with open(reply_template_fname,'r') as f:
         reply_msg = f.read()
     return(reply_msg)

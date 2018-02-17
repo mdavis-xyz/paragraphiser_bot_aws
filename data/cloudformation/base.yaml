@@ -12,9 +12,9 @@ Parameters:
       checkOldOneS3Version:
           Type: String
           Description: Version of the zip for checkOldOne
-      poll15S3Version:
+      pollS3Version:
           Type: String
-          Description: Version of the zip for poll15
+          Description: Version of the zip for poll
       errorHandlerS3Version:
           Type: String
           Description: Version of the zip for errorHandler
@@ -119,6 +119,11 @@ Resources:
                      Effect: Allow
                      Principal:
                          Service: [ "logs.ap-southeast-2.amazonaws.com" ]
+                   - Action:
+                         -  "sts:AssumeRole"
+                     Effect: Allow
+                     Principal:
+                         Service: [ "events.amazonaws.com" ]
 
       # this table contains data about each post that was at some point eligible
       postHistoryTable:
@@ -164,7 +169,7 @@ Resources:
           Type: "AWS::Events::Rule"
           Properties:
               Description: "ScheduledRule"
-              ScheduleExpression: "cron(0/10 * * * ? *)"
+              ScheduleExpression: "rate(15 minutes)"
               State: "ENABLED"
               Targets:
                 -
@@ -194,20 +199,19 @@ Resources:
                 "Fn::GetAtt": ["ExecutionRole", "Arn"]
             Environment:
                 Variables:
-                   dry_run: False
                    num_to_scan: 50
                    delay_table:
                        Ref: "delayTable"
                    post_history_table:
                        Ref: "postHistoryTable"
-                   delay_queue:
-                       Ref: "delayQueue"
+                   bot_name:
+                       Ref: "botname"
       errorAlarmCheckForNew:
          Type: "AWS::CloudWatch::Alarm"
          Properties:
            ActionsEnabled: True # not sure
            AlarmDescription:
-               "Unable to check whether new posts are eligible"
+               "Function checkForNew failed. Unable to check whether new posts are eligible"
            AlarmActions:
                - Ref: "errorTopic"
            ComparisonOperator: "GreaterThanOrEqualToThreshold"
@@ -224,38 +228,38 @@ Resources:
            TreatMissingData: "notBreaching"
 
       #######################
-      # poll15
+      # poll
       # this lambda will poll dynamodb every 15 minutes,
       # then will take all timestamps <= 15 minutes into the future,
       # and send them into SQS, for checkOldOne to check
       #######################
-      triggerPoll15:
+      triggerPoll:
           Type: "AWS::Events::Rule"
           Properties:
               Description: "ScheduledRule"
-              ScheduleExpression: "cron(0/15 * * * ? *)"
+              ScheduleExpression: "rate(1 minute)"
               State: "ENABLED"
               Targets:
                 -
                   Arn:
-                     Fn::GetAtt: ["poll15", "Arn"]
-                  Id: "trigger_poll15"
-      permitTriggerPoll15:
+                     Fn::GetAtt: ["poll", "Arn"]
+                  Id: "trigger_poll"
+      permitTriggerPoll:
           Type: "AWS::Lambda::Permission"
           Properties:
              FunctionName:
-                Ref: "poll15"
+                Ref: "poll"
              Action: "lambda:InvokeFunction"
              Principal: "events.amazonaws.com"
              SourceArn:
-                Fn::GetAtt: [ "triggerPoll15", "Arn"]
-      poll15:
+                Fn::GetAtt: [ "triggerPoll", "Arn"]
+      poll:
           Type: AWS::Lambda::Function
           Properties:
             Code:
               S3Bucket: !Ref "codebucket"
-              S3Key: poll15.zip
-              S3ObjectVersion: !Ref "poll15S3Version"
+              S3Key: poll.zip
+              S3ObjectVersion: !Ref "pollS3Version"
             Handler: main.lambda_handler
             Runtime: python3.6
             Timeout: 300
@@ -263,21 +267,20 @@ Resources:
                 "Fn::GetAtt": ["ExecutionRole", "Arn"]
             Environment:
                 Variables:
-                   dry_run: False
                    post_history_table:
                        Ref: "postHistoryTable"
                    delay_table:
                        Ref: "delayTable"
-                   delay_queue:
-                       Ref: "delayQueue"
                    bot_name:
                        !Ref "botname"
-      errorAlarmPoll15:
+                   checkOldArn:
+                       Fn::GetAtt: ["checkOldOne", "Arn"]
+      errorAlarmPoll:
          Type: "AWS::CloudWatch::Alarm"
          Properties:
            ActionsEnabled: True # not sure
            AlarmDescription:
-               "Unable to schedule checks for previous comments by this bot"
+               "Function poll failed. Unable to schedule checks for previous comments by this bot"
            AlarmActions:
                - Ref: "errorTopic"
            ComparisonOperator: "GreaterThanOrEqualToThreshold"
@@ -287,7 +290,7 @@ Resources:
            Dimensions:
                - Name: "FunctionName"
                  Value: 
-                     Ref: "poll15"
+                     Ref: "poll"
            Period: 60 # minimum
            Statistic: Sum
            Threshold: 1
@@ -298,10 +301,6 @@ Resources:
       # This function checks posts that were eligible to see if they
       # still are, and what reaction we've got to our post
       #######################
-      delayQueue:
-         Type: "AWS::SQS::Queue"
-         # Properties:
-         #   FifoQueue: False
       checkOldOne:
           Type: AWS::Lambda::Function
           Properties:
@@ -316,27 +315,14 @@ Resources:
                 "Fn::GetAtt": ["ExecutionRole", "Arn"]
             Environment:
                 Variables:
-                   dry_run: False
                    post_history_table:
                        Ref: "postHistoryTable"
-      sqsCanInvokeCheckOldOne:
-          Type: "AWS::Lambda::Permission"
-          Properties:
-              Action: "lambda:InvokeFunction"
-              Principal: "sqs.amazonaws.com"
-              SourceArn:
-                 "Fn::GetAtt" : ["delayQueue", "Arn"]
-              FunctionName:
-                 "Fn::GetAtt" : ["checkOldOne", "Arn"]
-          DependsOn:
-              - "checkOldOne"
-              - "delayQueue"
       errorAlarmCheckOldOne:
          Type: "AWS::CloudWatch::Alarm"
          Properties:
            ActionsEnabled: True # not sure
            AlarmDescription:
-               "Unable to check reaction to a previous comment by this bot"
+               "Function checkOldOne failed. Unable to check reaction to a previous comment by this bot"
            AlarmActions:
                - Ref: "errorTopic"
            ComparisonOperator: "GreaterThanOrEqualToThreshold"
@@ -396,7 +382,7 @@ Resources:
          Properties:
            ActionsEnabled: True # not sure
            AlarmDescription:
-               "test failure"
+               "Function failer. test failure"
            AlarmActions:
                - Ref: "errorTopic"
            ComparisonOperator: "GreaterThanOrEqualToThreshold"
@@ -441,14 +427,14 @@ Resources:
                 Type: "AWS::DynamoDB::Table"
                 Properties:
                    AttributeDefinitions:
-                       - AttributeName: "hash" # can't have a table with just a sort
+                       - AttributeName: "error" # can't have a table with just a sort
                          AttributeType: "S"
-                       - AttributeName: "time"
+                       - AttributeName: "stackUpdateTime"
                          AttributeType: "N"
                    KeySchema:
-                       - AttributeName: "hash"
+                       - AttributeName: "error"
                          KeyType:       "HASH"
-                       - AttributeName: "time"
+                       - AttributeName: "stackUpdateTime"
                          KeyType:       "RANGE"
                    ProvisionedThroughput:
                          ReadCapacityUnits: 5

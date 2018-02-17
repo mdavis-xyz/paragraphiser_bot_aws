@@ -39,26 +39,61 @@ def error_handler(logger,event):
         logger.info('record is:')
         logger.info(pp.pformat(event))
         msg_core = json.loads(rec['Sns']['Message'])['AlarmDescription']
-        if not msg_already_sent(msg_core):
+        if not msg_already_sent(logger,msg_core):
             print('New message: %s' % msg_core)
             msg = 'A problem has occured with your %s reddit bot.\n\n%s' % (bot_name,msg_core)
             send_sms(logger,msg)
-            save_to_table(msg_core)
+            save_to_table(logger,msg_core)
         else:
             print('Error message: %s' % msg_core)
             print('We\'ve already sent that message. Don\'t do anything')
         
-def msg_already_sent(msg):
+def msg_already_sent(logger,msg):
     table_name = os.environ['error_table']
-    stack_timestamp()
-    return(False)
+    timestamp = stack_timestamp()
 
-def save_to_table(msg):
+    client = boto3.client('dynamodb')
+
+    response = client.get_item(
+        TableName=table_name,
+        Key={
+            'error': {
+                'S': msg
+            },
+            'stackUpdateTime': {
+                'N': str(timestamp) # boto requires str for ints
+            }
+        },
+        ConsistentRead=False # if we send a message twice within milliseconds, the user won't be inconvenienced
+    )
+
+    exists = ('Item' in response)
+
+    logger.info('Item exists? %s' % exists)
+
+    return(exists)
+    
+def save_to_table(logger,msg):
     table_name = os.environ['error_table']
-    stack_timestamp()
-    # TODO
-    print('haven\'t implemented this')
+    timestamp = stack_timestamp()
+    client = boto3.client('dynamodb')
 
+    logger.info('saving error message to dynamo for time %d' % timestamp)
+
+    response = client.put_item(
+        TableName=table_name,
+        Item={
+            'error': {
+                'S': msg
+            },
+            'stackUpdateTime': {
+                'N': str(timestamp) # boto requires str for ints
+            }
+        },
+    )
+
+    logger.info('saved error message to dynamodb')
+    
 def send_sms(logger,msg):
     phone_number = os.environ['phone_number']
 

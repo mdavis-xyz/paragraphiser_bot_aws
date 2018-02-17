@@ -46,7 +46,9 @@ class Lam(object):
             print(warn('Skipping uploading of lambdas'))
             print('using latest versions of zips currently in S3')
             lambdas = self.list_local_lambdas()
-            versions = [{'name':lam,'S3Version':self.latest_version(lam)} for lam in lambdas]
+            with Pool(3) as p:
+                versions_raw = p.map(self.latest_version,lambdas)
+            versions = [{'name':lam,'S3Version':v} for (lam,v) in zip(lambdas,versions_raw)]
         else:
 
             # check code bucket exists
@@ -232,10 +234,14 @@ class Lam(object):
 
         versions = response['Versions']
 
+        i = 0
+
         while(response['IsTruncated']):
             # pp.pprint(response)
-            sys.stdout.write('.') # print('.') but without a newline
-            sys.stdout.flush()
+            i = i + 1
+            if (i % 5) == 0:
+                sys.stdout.write('.') # print('.') but without a newline
+                sys.stdout.flush()
             # print('Getting next page of version info for zip %s from S3' % lambda_name)
             assert('NextVersionIdMarker' in response)
             response = client.list_object_versions(

@@ -6,7 +6,6 @@ from boto3.dynamodb.conditions import Key, Attr
 import time
 import json
 import common
-import scheduling
 
 def lambda_handler(event,contex):
     if ('unitTest' in event) and event['unitTest']:

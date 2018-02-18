@@ -6,11 +6,6 @@ import time
 import json
 import common
 
-# Apparently you can't have a dynamo table with just a
-# sort key. So I'll add a hash key, which will only have
-# one value of 0
-# TODO: move this to common?
-hash_key_val = 'data'
 
 def lambda_handler(event,contex):
     if ('unitTest' in event) and event['unitTest']:
@@ -47,7 +42,7 @@ def check_latest_batch(dry_run=False):
         response = client.invoke(
             FunctionName=handler_lambda_arn,
             InvocationType=invocationType,
-            Payload=json.dumps(post_id).encode(),
+            Payload=json.dumps({'post_id':post_id}).encode(),
         )
 
         print('Invoked %s with payload %s' % (handler_lambda_arn,str(payload)))
@@ -94,7 +89,7 @@ def fetch_next(dry_run=False,seconds=60):
 def table_query_unpaginated(time_until):
     client = boto3.client('dynamodb')
 
-    table_name = os.environ['delay_table']
+    table_name = os.environ['schedule_table']
 
     dynamodb = boto3.resource('dynamodb')
     # doing resource and table instead of client
@@ -108,7 +103,7 @@ def table_query_unpaginated(time_until):
         Select='ALL_ATTRIBUTES',
         Limit=100,
         ConsistentRead=False, # if we miss out by a few milliseconds, we'll get it again in a minute
-        KeyConditionExpression=Key('hash').eq(hash_key_val) & Key('time').lte(time_until)
+        KeyConditionExpression=Key('hash').eq(common.hash_key_val) & Key('time').lte(time_until)
     )
     items = response['Items']
 
@@ -117,7 +112,7 @@ def table_query_unpaginated(time_until):
             Select='ALL_ATTRIBUTES',
             Limit=100,
             ConsistentRead=False, # if we miss out by a few milliseconds, we'll get it again in a minute
-            KeyConditionExpression=Key('hash').eq(hash_key_val) & Key('time').lte(time_until), # Key('hash').eq(hash_key_val) & 
+            KeyConditionExpression=Key('hash').eq(common.hash_key_val) & Key('time').lte(time_until), # Key('hash').eq(common.hash_key_val) & 
             ExclusiveStartKey=response['LastEvaluatedKey']
         )
         items.extend(response['Items'])
@@ -127,11 +122,11 @@ def table_query_unpaginated(time_until):
 def delete_item(item):
     client = boto3.client('dynamodb')
 
-    table_name = os.environ['delay_table']
+    table_name = os.environ['schedule_table']
 
     key = {
             'hash': {
-                'S': hash_key_val
+                'S': common.hash_key_val
             },
             'time': {
                 'N': str(int(item['time']))                                                                                                                                                   

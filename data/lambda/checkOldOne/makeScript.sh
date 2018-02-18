@@ -21,11 +21,13 @@ virtualenv -p /usr/bin/python3.6 ./env
 # pip install nose
 pip install boto3
 pip install praw
+pip install mako # dependency of common.py
 
 rm -rf include
 mkdir include
 cp $1/credentials/praw.ini include/praw.ini
 cp $1/util/common.py include/common.py
+cp $1/util/replyTemplateUpdate.mako include/replyTemplateUpdate.mako
 
 deactivate
 

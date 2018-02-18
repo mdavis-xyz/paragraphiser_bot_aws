@@ -144,7 +144,7 @@ Resources:
 
       # this table contains a list of timestamps for the future, and post ids
       # at those times we will go back and check the original post and our comment
-      delayTable:
+      scheduleTable:
                 Type: "AWS::DynamoDB::Table"
                 Properties:
                    AttributeDefinitions:
@@ -204,8 +204,8 @@ Resources:
             Environment:
                 Variables:
                    num_to_scan: 50
-                   delay_table:
-                       Ref: "delayTable"
+                   schedule_table:
+                       Ref: "scheduleTable"
                    post_history_table:
                        Ref: "postHistoryTable"
                    bot_name:
@@ -274,8 +274,8 @@ Resources:
                 Variables:
                    post_history_table:
                        Ref: "postHistoryTable"
-                   delay_table:
-                       Ref: "delayTable"
+                   schedule_table:
+                       Ref: "scheduleTable"
                    bot_name:
                        Ref "botname"
                    checkOldArn:
@@ -414,6 +414,10 @@ Resources:
                        "Fn::GetAtt": ["errorHandler", "Arn"]
                    Protocol:
                        "lambda"
+                 - Endpoint:
+                       "aws_alarms@mdavis.xyz"
+                   Protocol:
+                       "email"
           DependsOn:
               - "errorHandler"        
       permitTriggerErrorHandler:

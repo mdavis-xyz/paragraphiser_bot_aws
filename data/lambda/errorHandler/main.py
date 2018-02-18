@@ -111,3 +111,6 @@ def send_sms(logger,msg):
             }
         }
     )
+
+    pp.pprint(response)
+    print('SMS sent')

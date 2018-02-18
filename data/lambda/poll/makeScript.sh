@@ -21,6 +21,7 @@ virtualenv -p /usr/bin/python3.6 ./env
 # pip install nose
 pip install boto3
 # pip install praw
+pip install mako # dependency of common.py
 
 rm -rf include
 mkdir include

@@ -12,7 +12,11 @@ import string
 # one value
 hash_key_val = 'data'
 
+# bot replies for posts with at least this many characters without a new line
+size_limit = 2300
+
 def unit_tests():
+    test_count_words()
     return()
 
 # only run from a lambda which has replyTemplateNew.mako
@@ -25,28 +29,13 @@ def mako_test():
 
 
 def max_paragraph_size(text):
-    paragraphs = text.split('\n')
+    paragraphs = text.split('\n\n') # single line breaks don't render as new paragraph in markdown
+
+    # in case there are triple \n
+    paragraphs = [p.strip('\n') for p in paragraphs]
+
     largest_para = max([len(p) for p in paragraphs])
     return(largest_para)
-
-# count the number of times word appears in text
-# case insensitive
-def count_word_occurance(word,text):
-    # replace all white space with single space characters
-    for c in string.whitespace:
-        text = text.replace(c,' ')
-    assert(all([c not in word for c in string.whitespace]))
-
-    # split by white space
-    words = text.split(' ')
-
-    # and remove punctuation
-    words = [w.strip(string.punctuation) for w in words]
-
-    # case insensitive count
-    count = len([w for w in words if word.lower() in w.lower()])
-
-    return(count)
 
 # for posts we have not seen before
 # if you want to ignore this post, return None
@@ -62,20 +51,20 @@ def generate_reply(submission):
         print('Submission %s is not eligible for reply because it is not a self post' % submission.id)
         return(None)
     else:
-        num_potatos = count_word_occurance('potato',submission.selftext)
-        if num_potatos == 0:
-            print('Submission %s is not eligible for reply because it doesn\'t mention the word potato' % submission.id)
+        max_size = max_paragraph_size(submission.selftext)
+        print('Max size in this post: %d chars, size_limit %d' % (max_size,size_limit))
+        if max_size < size_limit:
+            print('Submission %s is not eligible for reply because it is too short' % submission.id)
             return(None)
 
         # using mako library to pass data into the template
         reply_template_fname = './replyTemplateNew.mako'
         with open(reply_template_fname,'r') as f:
-            reply_msg = Template(f.read()).render(num_potatos=num_potatos)
+            reply_msg = Template(f.read()).render()
 
         ret = {
             'original_reply':reply_msg,
-            'original_post':submission.selftext,
-            'original_num_potatos':num_potatos
+            'original_post':submission.selftext
         }
 
         return(ret)
@@ -91,29 +80,64 @@ def generate_reply(submission):
 # if it contains keys returned before, this latest version's values will be updated
 def update_reply(submission,comment,data):
     assert(submission.is_self)
-    if 'potato' in submission.selftext:
-        print('Post %s is still eligible for comment' % submission.id)
+    max_size = max_paragraph_size(submission.selftext)
+
+    if max_size >= size_limit:
+        print('Post %s is still eligible for comment, no change' % submission.id)
         return(None)
     else:
         reply_template_fname = './replyTemplateUpdate.mako'
-        cur_num_potatos = count_word_occurance('potato',submission.selftext)
-        prev_num_potatos = data['original_num_potatos']
-
-        if cur_num_potatos == prev_num_potatos:
-            print('number of potato mentions has not changed since original post, doing nothing to post %s' % submission.id)
-            return(None)
-        elif ('current_num_potatos' in data) and (data['current_num_potatos'] == cur_num_potatos):
-            print('number of potato mentions has not changed since last check, doing nothing to post %s' % submission.id)
-            return(None)
-            
+        cur_words = count_words_max(submission.selftext)
+        prev_words = count_words_max(submission.selftext)
 
         with open(reply_template_fname,'r') as f:
             reply_msg = Template(f.read()).render(
-                cur_num_potatos=cur_num_potatos,
-                prev_num_potatos=prev_num_potatos
+                cur_max=cur_words,
+                prev_max=prev_words
             )
 
-        data['current_num_potatos'] = cur_num_potatos
         data['updated_reply'] = reply_msg
 
         return(data)
+
+# returns the number of words in the longest paragraph
+def count_words_max(text):
+    paragraphs = text.split('\n\n') # one \n renders as the same paragraph in markdown
+
+    # in case there's 3 new line characters, remove 1 on the ends
+    paragraphs = [p.strip('\n') for p in paragraphs]
+
+    # if there's a single new line character, replace it with a normal space, because it's a word break
+    paragraphs = [p.replace('\n',' ') for p in paragraphs]
+    
+    lengths = [count_words(p) for p in paragraphs]
+    return(max(lengths))
+
+# returns the number of words, assuming this is one paragraph
+def count_words(text):
+
+    # replace all white space with single space characters
+    for c in string.whitespace:
+        text = text.replace(c,' ')
+
+    # remove punctuation
+    for c in string.punctuation:
+        text = text.replace(c,'')
+
+    # split by white space
+    words = text.split(' ')
+
+    # get rid of empty words (e.g. was punctuation, or multiple consecutive white space
+    words = [w for w in words if w != '']
+
+    count = len(words)
+
+    return(count)
+
+def test_count_words():
+    print('Testing count_words_max()')
+    example = 'I\'ve got to get out of, here now!\n\nNo use stayin\'\nyeah you heard me, that is what I said'
+    expected = 12
+    actual = count_words_max(example)
+    assert(expected == actual)
+    print('count_words() test passed')

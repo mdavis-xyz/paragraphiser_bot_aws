@@ -1,4 +1,5 @@
-Beep boop, I'm [a bot](https://github.com/mlda065/wall_of_text_reddit/tree/master).
+Beep boop, I'm [a bot](https://github.com/mlda065/paragraphiser_bot_aws/tree/paragraphiser).
 
-Your post previously mentioned the word 'potato' ${'%d' % prev_num_potatos} times, 
-but now it ${'only' if (cur_num_potatos < prev_num_potatos) else ''} mentions 'potato' ${'%d' % cur_num_potatos} times.
+~~It seems you've posted a huge wall of text.~~
+Thanks for splitting up your post. 
+Now the largest paragraph size is only ${cur_max} instead of ${prev_max}.

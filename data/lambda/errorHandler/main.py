@@ -42,7 +42,7 @@ def error_handler(logger,event):
         if not msg_already_sent(logger,msg_core):
             print('New message: %s' % msg_core)
             msg = 'A problem has occured with your %s reddit bot.\n\n%s' % (bot_name,msg_core)
-            send_sms(logger,msg)
+            send_msg(logger,msg)
             save_to_table(logger,msg_core)
         else:
             print('Error message: %s' % msg_core)
@@ -94,23 +94,23 @@ def save_to_table(logger,msg):
 
     logger.info('saved error message to dynamodb')
     
-def send_sms(logger,msg):
-    phone_number = os.environ['phone_number']
+def send_msg(logger,msg):
+
+    bot_name = os.environ['bot_name']
+
+    topic = os.environ['filtered_error_topic']
 
     client = boto3.client('sns')
-   
-    logger.info('About to send the following message to %s:\n%s' % (phone_number,msg))
+
+    print('Sending SNS message to %s' % topic)
 
     response = client.publish(
-        PhoneNumber=phone_number, 
+        TopicArn=topic,
         Message=msg,
-        MessageAttributes={
-            'AWS.SNS.SMS.SenderID':{
-                'DataType':'String',
-                'StringValue':'MyRedditBot'
-            }
-        }
+        Subject='Lambda failure for %s bot' % bot_name
     )
+    
+    print('sns message sent')
 
-    pp.pprint(response)
-    print('SMS sent')
+
+

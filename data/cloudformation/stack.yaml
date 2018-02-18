@@ -217,7 +217,7 @@ Resources:
            AlarmDescription:
                "Function checkForNew failed. Unable to check whether new posts are eligible"
            AlarmActions:
-               - Ref: "errorTopic"
+               - Ref: "unfilteredErrorTopic"
            ComparisonOperator: "GreaterThanOrEqualToThreshold"
            EvaluationPeriods: 1
            MetricName: "Errors"
@@ -287,7 +287,7 @@ Resources:
            AlarmDescription:
                "Function poll failed. Unable to schedule checks for previous comments by this bot"
            AlarmActions:
-               - Ref: "errorTopic"
+               - Ref: "unfilteredErrorTopic"
            ComparisonOperator: "GreaterThanOrEqualToThreshold"
            EvaluationPeriods: 1
            MetricName: "Errors"
@@ -323,6 +323,10 @@ Resources:
                 Variables:
                    post_history_table:
                        Ref: "postHistoryTable"
+                   filtered_error_topic:
+                       Ref: "filteredErrorTopic"
+                   bot_name:
+                       Ref: "botname"
       errorAlarmCheckOldOne:
          Type: "AWS::CloudWatch::Alarm"
          Properties:
@@ -330,7 +334,7 @@ Resources:
            AlarmDescription:
                "Function checkOldOne failed. Unable to check reaction to a previous comment by this bot"
            AlarmActions:
-               - Ref: "errorTopic"
+               - Ref: "unfilteredErrorTopic"
            ComparisonOperator: "GreaterThanOrEqualToThreshold"
            EvaluationPeriods: 1
            MetricName: "Errors"
@@ -364,14 +368,14 @@ Resources:
                 "Fn::GetAtt": ["ExecutionRole", "Arn"]
             Environment:
                 Variables:
-                   phone_number:
-                      "+61415762868"
                    bot_name:
                        Ref: "botname"   
                    error_table:
                        Ref: "errorHistoryTable"
                    stack_name:
                        Ref: "AWS::StackName"
+                   filtered_error_topic:
+                       Ref: "filteredErrorTopic"
       failer:
           Type: AWS::Lambda::Function
           Properties:
@@ -392,7 +396,7 @@ Resources:
            AlarmDescription:
                "Function failer. test failure"
            AlarmActions:
-               - Ref: "errorTopic"
+               - Ref: "unfilteredErrorTopic"
            ComparisonOperator: "GreaterThanOrEqualToThreshold"
            EvaluationPeriods: 1
            MetricName: "Errors"
@@ -406,7 +410,7 @@ Resources:
            Threshold: 1
            TreatMissingData: "notBreaching"
 
-      errorTopic:
+      unfilteredErrorTopic:
           Type: "AWS::SNS::Topic"
           Properties:
               Subscription:
@@ -414,10 +418,6 @@ Resources:
                        "Fn::GetAtt": ["errorHandler", "Arn"]
                    Protocol:
                        "lambda"
-                 - Endpoint:
-                       "aws_alarms@mdavis.xyz"
-                   Protocol:
-                       "email"
           DependsOn:
               - "errorHandler"        
       permitTriggerErrorHandler:
@@ -428,10 +428,10 @@ Resources:
              Action: "lambda:InvokeFunction"
              Principal: "sns.amazonaws.com"
              SourceArn:
-                Ref: "errorTopic"
+                Ref: "unfilteredErrorTopic"
           DependsOn:
               - "errorHandler"
-              - "errorTopic"
+              - "unfilteredErrorTopic"
       # if something goes wrong, we send an sms
       # but don't send a second message for the same error until after the stack is updated
       # this table stores that information
@@ -451,3 +451,11 @@ Resources:
                    ProvisionedThroughput:
                          ReadCapacityUnits: 5
                          WriteCapacityUnits: 5
+      filteredErrorTopic:
+          Type: "AWS::SNS::Topic"
+          Properties:
+              Subscription:
+                 - Endpoint:
+                       "aws_alarms@mdavis.xyz"
+                   Protocol:
+                       "email"

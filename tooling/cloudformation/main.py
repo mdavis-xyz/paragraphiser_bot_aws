@@ -10,10 +10,11 @@ import traceback as tb
 
 class CloudFormation(object):
 
-    def __init__(self,project_name,cloudformation_dir,code_bucket):
+    def __init__(self,project_name,cloudformation_dir,code_bucket,stage):
         self.code_bucket = code_bucket
         self.cloudformation_dir = cloudformation_dir
         self.project_name = project_name
+        self.stage = stage
 
     # versions is a list of versions of s3 objects for lambdas
     # list of {'name':lambda_name,'S3Version':version}
@@ -51,6 +52,10 @@ class CloudFormation(object):
             {
                 'ParameterKey': 'codebucket',
                 'ParameterValue': self.code_bucket
+            },
+            {
+                'ParameterKey': 'stage',
+                'ParameterValue': self.stage
             }
         ]
 

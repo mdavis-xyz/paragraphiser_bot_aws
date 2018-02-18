@@ -15,13 +15,14 @@ import sys
 
 class Lam(object):
 
-    def __init__(self,project_name,region, lambda_dir,lib_dir,data_dir,code_bucket):
+    def __init__(self,project_name,region, lambda_dir,lib_dir,data_dir,code_bucket,stage):
         self.project_name = project_name
         self.lambda_dir = lambda_dir
         self.lib_dir = lib_dir
         self.code_bucket = code_bucket
         self.data_dir = data_dir
         self.region = region
+        self.stage = stage
 
     def list_local_lambdas(self):
         subdirs = [f for f in listdir(self.lambda_dir) if isdir(join(self.lambda_dir, f))]
@@ -225,6 +226,7 @@ class Lam(object):
         print('Getting version info for zip %s from S3' % lambda_name)
         response = client.list_object_versions(
             Bucket=self.code_bucket,
+            Prefix=key,
             # KeyMarker=key, # won't work if we just list versions for one key
             MaxKeys=1 # deleted keys show up for some reason
         )
@@ -248,7 +250,8 @@ class Lam(object):
                 Bucket=self.code_bucket,
                 KeyMarker=response['NextKeyMarker'],
                 MaxKeys=1, # deleted keys show up for some reason
-                VersionIdMarker=response['NextVersionIdMarker']
+                VersionIdMarker=response['NextVersionIdMarker'],
+                Prefix=key
             )
             versions.extend(response['Versions'])
 
@@ -274,7 +277,7 @@ class Lam(object):
         return(version)
 
     def s3_key(self,lambda_name):
-        return('%s.zip' % lambda_name)
+        return('%s/%s.zip' % (self.stage,lambda_name))
 
     def upload_one(self,name):
         zip_fname = os.path.join(self.lambda_dir,name,"lambda.zip")

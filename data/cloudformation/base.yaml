@@ -3,6 +3,9 @@ Parameters:
       botname:
           Type: String
           Description: Name of the reddit bot
+      stage:
+          Type: String
+          Description: Deployment stage (dev vs prod)
       codebucket:
           Type: String
           Description: S3 bucket where lambda code should be saved
@@ -190,7 +193,7 @@ Resources:
           Properties:
             Code:
               S3Bucket: !Ref "codebucket"
-              S3Key: checkForNew.zip
+              S3Key: !Join [ "/", [ !Ref "stage", "checkForNew.zip"] ]
               S3ObjectVersion: !Ref "checkForNewS3Version"
             Handler: main.lambda_handler
             Runtime: python3.6
@@ -258,7 +261,7 @@ Resources:
           Properties:
             Code:
               S3Bucket: !Ref "codebucket"
-              S3Key: poll.zip
+              S3Key: !Join [ "/", [ !Ref "stage", "poll.zip"] ]
               S3ObjectVersion: !Ref "pollS3Version"
             Handler: main.lambda_handler
             Runtime: python3.6
@@ -306,7 +309,7 @@ Resources:
           Properties:
             Code:
               S3Bucket: !Ref "codebucket"
-              S3Key: checkOldOne.zip
+              S3Key: !Join [ "/", [ !Ref "stage", "checkOldOne.zip"] ]
               S3ObjectVersion: !Ref "checkOldOneS3Version"
             Handler: main.lambda_handler
             Runtime: python3.6
@@ -348,7 +351,7 @@ Resources:
           Properties:
             Code:
               S3Bucket: !Ref "codebucket"
-              S3Key: errorHandler.zip
+              S3Key: !Join [ "/", [ !Ref "stage", "errorHandler.zip"] ]
               S3ObjectVersion: !Ref "errorHandlerS3Version"
             Handler: main.lambda_handler
             Runtime: python3.6
@@ -370,7 +373,7 @@ Resources:
           Properties:
             Code:
               S3Bucket: !Ref "codebucket"
-              S3Key: failer.zip
+              S3Key: !Join [ "/", [ !Ref "stage", "failer.zip"] ]
               S3ObjectVersion: !Ref "failerS3Version"
             Handler: main.lambda_handler
             Runtime: python3.6

@@ -380,12 +380,16 @@ class Lam(object):
         prefix=self.stage + '/'
         objs = self.list_all_zips(prefix)
 
+        print('There are %d zips in S3 %s/%s/' % (len(objs),self.code_bucket,self.stage))
+
         lambdas = self.list_local_lambdas()
         keys_to_keep = ['%s/%s.zip' % (self.stage,lam) for lam in lambdas]
 
         dont_del = lambda item: item['IsLatest'] and item['Key'] in keys_to_keep
 
         objs = [obj for obj in objs if not dont_del(obj)]
+
+        print('About to delete %d zips' % len(objs))
 
         #self.delete_versions(objs)
         for obj in objs:

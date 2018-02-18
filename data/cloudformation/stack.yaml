@@ -148,10 +148,10 @@ Resources:
                 Type: "AWS::DynamoDB::Table"
                 Properties:
                    AttributeDefinitions:
-                       - AttributeName: "time"
-                         AttributeType: "N"
                        - AttributeName: "hash"
                          AttributeType: "S"
+                       - AttributeName: "time"
+                         AttributeType: "N"
                    KeySchema:
                        # Apparently you can't have a dynamo table with just a
                        # sort key. So I'll add a hash key, which will only have
@@ -191,6 +191,7 @@ Resources:
       checkForNew:
           Type: AWS::Lambda::Function
           Properties:
+            #FunctionName: !Join [ "-", [ !Ref "botname", "checkForNew"] ]
             Code:
               S3Bucket: !Ref "codebucket"
               S3Key: !Join [ "/", [ !Ref "stage", "checkForNew.zip"] ]
@@ -259,6 +260,7 @@ Resources:
       poll:
           Type: AWS::Lambda::Function
           Properties:
+            #FunctionName: !Join [ "-", [ !Ref "botname", "poll"] ]
             Code:
               S3Bucket: !Ref "codebucket"
               S3Key: !Join [ "/", [ !Ref "stage", "poll.zip"] ]
@@ -275,7 +277,7 @@ Resources:
                    delay_table:
                        Ref: "delayTable"
                    bot_name:
-                       !Ref "botname"
+                       Ref "botname"
                    checkOldArn:
                        Fn::GetAtt: ["checkOldOne", "Arn"]
       errorAlarmPoll:
@@ -307,6 +309,7 @@ Resources:
       checkOldOne:
           Type: AWS::Lambda::Function
           Properties:
+            #FunctionName: !Join [ "-", [ !Ref "botname", "checkOldOne"] ]
             Code:
               S3Bucket: !Ref "codebucket"
               S3Key: !Join [ "/", [ !Ref "stage", "checkOldOne.zip"] ]
@@ -349,6 +352,7 @@ Resources:
       errorHandler:
           Type: AWS::Lambda::Function
           Properties:
+            #FunctionName: !Join [ "-", [ !Ref "botname", "errorHandler"] ]
             Code:
               S3Bucket: !Ref "codebucket"
               S3Key: !Join [ "/", [ !Ref "stage", "errorHandler.zip"] ]
@@ -371,6 +375,7 @@ Resources:
       failer:
           Type: AWS::Lambda::Function
           Properties:
+            #FunctionName: !Join [ "-", [ !Ref "botname", "failer"] ]
             Code:
               S3Bucket: !Ref "codebucket"
               S3Key: !Join [ "/", [ !Ref "stage", "failer.zip"] ]

@@ -18,4 +18,7 @@ class Project(object):
         self.lam.the_lot(skip_zip,skip_build, skip_upload)
         self.cf.deploy(self.lam.versions)
         self.lam.test_lambdas(skip_test,self.cf.stack_name)
+        print('Cleaning up')
+        # only delete old zips after we're sure we don't need to roll back
+        self.lam.cleanup()
         print(good('Finished everything!'))

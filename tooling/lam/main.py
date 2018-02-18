@@ -315,7 +315,7 @@ class Lam(object):
 
         long_name = response['StackResourceDetail']['PhysicalResourceId']
 
-        print('Long name for lambda %s is %s' % (short,long_name))
+        #print('   Long name for lambda %s is %s' % (short,long_name))
         return(long_name)
 
     def test_one(self,name):
@@ -373,3 +373,86 @@ class Lam(object):
 
         functions = [x['FunctionName'] for x in response['Functions']]
         return(name in functions)
+
+    # delete old versions of the zips in S3
+    def cleanup(self):
+        print('Deleting old versions of zips from S3')
+        prefix=self.stage + '/'
+        objs = self.list_all_zips(prefix)
+
+        lambdas = self.list_local_lambdas()
+        keys_to_keep = ['%s/%s.zip' % (self.stage,lam) for lam in lambdas]
+
+        dont_del = lambda item: item['IsLatest'] and item['Key'] in keys_to_keep
+
+        objs = [obj for obj in objs if not dont_del(obj)]
+
+        #self.delete_versions(objs)
+        for obj in objs:
+            self.delete_version(obj)
+
+    # takes in a list of {'Key':fullkey,'VersionId':s3version,'IsLatest':bool}
+    # deletes it
+    def delete_version(self,obj):
+        client = boto3.client('s3')
+
+        print('Deleting key %s version %s from S3 bucket %s' % (obj['Key'],obj['VersionId'],self.code_bucket))
+
+        response = client.delete_object(
+            Bucket=self.code_bucket,
+            Key=obj['Key'],
+            VersionId=obj['VersionId']
+        )
+
+    # takes in a list of {'Key':fullkey,'VersionId':s3version,'IsLatest':bool}
+    # deletes those objects from S3 in batch
+    def delete_versions(self,objs):
+        client = boto3.client('s3')
+
+        # batch delete works on up to 1000 items
+        MAX_ITEMS=1000 
+
+        to_delete = [{'Key':x['Key'],'VersionId':x['VersionId']} for x in objs[::MAX_ITEMS]]
+
+        print('About to delete the following from S3')
+        pp.pprint(objs[::MAX_ITEMS])
+        response = client.delete_objects(
+            Bucket=self.code_bucket,
+            Delete={
+                'Objects': to_delete,
+                'Quiet': False
+            },
+            MFA='string',
+            RequestPayer='requester'
+        )
+
+        # delete the remainder if there were too many
+        self.delete_versions(objs[MAX_ITEMS::])
+
+
+    # returns a list of {'Key':fullkey,'VersionId':s3version,'IsLatest':bool}
+    # for objects in the s3 directory for this stage
+    # handles pagination
+    # includes every version of each file
+    # with the latest version of the zips still used excluded
+    def list_all_zips(self,prefix):
+        client = boto3.client('s3')
+        response = client.list_object_versions(
+            Bucket=self.code_bucket,
+            MaxKeys=100,
+            Prefix=prefix
+        )
+
+        items = response['Versions']
+
+        while response['IsTruncated']:
+            response = client.list_object_versions(
+                Bucket=self.code_bucket,
+                MaxKeys=100,
+                Prefix=prefix,
+                KeyMarker=response['NextKeyMarker'],
+                VersionIdMarket=response['NextVersionIdMarker']
+            )
+            items.extend(response['Versions'])
+
+        return(items)

@@ -25,7 +25,7 @@ class CloudFormation(object):
 
         client = boto3.client('cloudformation')
 
-        stack_name_short = 'base'
+        stack_name_short = 'stack'
         fname = os.path.join('data','cloudformation','%s.yaml' % stack_name_short)
 
         if not os.path.isfile(fname):

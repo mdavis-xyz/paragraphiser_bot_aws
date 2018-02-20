@@ -99,16 +99,17 @@ def reply_and_save(reply,submission,dry_run):
         if dry_run:
             print('Would reply to post %s' % submission.id)
             print('With comment:\n%s' % reply['original_reply'])
-        try:
-            print('Replying to post %s' % submission.id)
-            comment = submission.reply(reply['original_reply'])
-        except praw.exceptions.APIException as e:
-            if 'ratelimit' in e.message.lower():
-                print('Hmm, I\'m being rate limited. Waiting 60 seconds')
-                time.sleep(60)
-                print('Waking up, trying again')
-                submission.reply(reply['original_reply'])
-        comment_id = comment.id
+        else:
+            try:
+                print('Replying to post %s' % submission.id)
+                comment = submission.reply(reply['original_reply'])
+            except praw.exceptions.APIException as e:
+                if 'ratelimit' in e.message.lower():
+                    print('Hmm, I\'m being rate limited. Waiting 60 seconds')
+                    time.sleep(60)
+                    print('Waking up, trying again')
+                    submission.reply(reply['original_reply'])
+            comment_id = comment.id
 
         save_initial(reply,submission.id,comment_id,dry_run)
         schedule_checks(submission.id,dry_run)

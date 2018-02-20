@@ -172,7 +172,7 @@ Resources:
           Type: "AWS::Events::Rule"
           Properties:
               Description: "ScheduledRule"
-              ScheduleExpression: "rate(15 minutes)"
+              ScheduleExpression: "rate(10 minutes)"
               State: "ENABLED"
               Targets:
                 -
@@ -233,9 +233,9 @@ Resources:
 
       #######################
       # poll
-      # this lambda will poll dynamodb every 15 minutes,
+      # this lambda will poll dynamodb every 15 minutes
       # then will take all timestamps <= 15 minutes into the future,
-      # and send them into SQS, for checkOldOne to check
+      # and invoke one lambda per post to check up on our past comments
       #######################
       triggerPoll:
           Type: "AWS::Events::Rule"
@@ -456,6 +456,6 @@ Resources:
           Properties:
               Subscription:
                  - Endpoint:
-                       "aws_alarms@mdavis.xyz"
+                       "{{cookiecutter.email_for_alerts}}"
                    Protocol:
                        "email"

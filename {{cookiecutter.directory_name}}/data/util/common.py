@@ -97,15 +97,10 @@ def update_reply(submission,comment,data):
     else:
         reply_template_fname = './replyTemplateUpdate.mako'
         cur_num_potatos = count_word_occurance('potato',submission.selftext)
+        if cur_num_potatos == data['current_num_potatos']:
+            print('No change to post %s since last check' % submission.id)
+            return(None)
         prev_num_potatos = data['original_num_potatos']
-
-        if cur_num_potatos == prev_num_potatos:
-            print('number of potato mentions has not changed since original post, doing nothing to post %s' % submission.id)
-            return(None)
-        elif ('current_num_potatos' in data) and (data['current_num_potatos'] == cur_num_potatos):
-            print('number of potato mentions has not changed since last check, doing nothing to post %s' % submission.id)
-            return(None)
-            
 
         with open(reply_template_fname,'r') as f:
             reply_msg = Template(f.read()).render(

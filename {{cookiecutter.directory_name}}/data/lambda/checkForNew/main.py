@@ -29,7 +29,8 @@ def look_for_new(dry_run=False):
     print('Looking for new posts')
 
     reddit = praw.Reddit('bot1')
-    subreddits = ['bottest']
+    subreddits = os.environ['subreddits'].split(',')
+    
 
     for sub_name in subreddits:
         print('subreddit: ' + sub_name)

@@ -38,9 +38,14 @@ def check_old(event):
     print('Getting comment %s' % comment_id)
     comment = reddit.comment(id=comment_id)
 
+    if 'updated_reply' in data:
+        prev_comment = data['updated_reply']
+    else:
+        prev_comment = data['original_reply']
+        
     ret = common.update_reply(submission,comment,data)
 
-    if ret != None:
+    if (ret != None) and (ret['updated_reply'] != prev_comment):
         print('Updating comment %s for post %s' % (comment_id,post_id))
         print('New comment:')
         print(ret['updated_reply'])

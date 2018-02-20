@@ -42,37 +42,6 @@ Resources:
                            - logs:*
                         Resource: "*"
                         Effect: Allow
-              - PolicyName: "S3"
-                PolicyDocument:
-                  Version  :  "2012-10-17"
-                  Statement:
-                     - Action:
-                           - "s3:*"
-                       Resource:
-                           - "*"
-                       Effect: Allow
-                     - Action:
-                           - "s3:Get*"
-                           - "s3:ListBucket"
-                       Resource:
-                           - "arn:aws:s3:::*"
-                       Effect: Allow
-                     - Action:
-                           - s3:ReplicateObject
-                           - s3:ReplicateDelete
-                           - s3:ReplicateTags
-                           - s3:GetObjectVersionTagging
-                       Resource:
-                           - "arn:aws:s3:::tenergy-summary-b/*"
-                       Effect: Allow
-              - PolicyName: "SQS"
-                PolicyDocument:
-                  Statement:
-                    - Action:
-                           - sqs:*
-                      Resource:
-                           - "*"
-                      Effect: Allow
               - PolicyName: "SNS_SMS"
                 PolicyDocument:
                   Statement:
@@ -203,13 +172,15 @@ Resources:
                 "Fn::GetAtt": ["ExecutionRole", "Arn"]
             Environment:
                 Variables:
-                   num_to_scan: 50
+                   num_to_scan: 30
                    schedule_table:
                        Ref: "scheduleTable"
                    post_history_table:
                        Ref: "postHistoryTable"
                    bot_name:
                        Ref: "botname"
+                   subreddits:
+                       "relationship_advice,bottest" # comma separated
       errorAlarmCheckForNew:
          Type: "AWS::CloudWatch::Alarm"
          Properties:

@@ -86,17 +86,23 @@ def update_reply(submission,comment,data):
         print('Post %s is still eligible for comment, no change' % submission.id)
         return(None)
     else:
-        reply_template_fname = './replyTemplateUpdate.mako'
+        prev_words = count_words_max(data['original_reply'])
         cur_words = count_words_max(submission.selftext)
-        prev_words = count_words_max(submission.selftext)
 
-        with open(reply_template_fname,'r') as f:
-            reply_msg = Template(f.read()).render(
-                cur_max=cur_words,
-                prev_max=prev_words
-            )
+        reply_template_fname = './replyTemplateUpdate.mako'
 
-        data['updated_reply'] = reply_msg
+        if cur_words == data['curr_words']:
+            print('I think we\'ve already updated our comment. Don\'t re-update')
+        else:
+
+            with open(reply_template_fname,'r') as f:
+                reply_msg = Template(f.read()).render(
+                    cur_max=cur_words,
+                    prev_max=prev_words
+                )
+
+            data['updated_reply'] = reply_msg
+            data['curr_words'] = cur_words
 
         return(data)
 

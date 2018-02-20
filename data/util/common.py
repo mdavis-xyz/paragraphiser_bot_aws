@@ -91,18 +91,14 @@ def update_reply(submission,comment,data):
 
         reply_template_fname = './replyTemplateUpdate.mako'
 
-        if cur_words == data['curr_words']:
-            print('I think we\'ve already updated our comment. Don\'t re-update')
-        else:
+        with open(reply_template_fname,'r') as f:
+            reply_msg = Template(f.read()).render(
+                cur_max=cur_words,
+                prev_max=prev_words
+            )
 
-            with open(reply_template_fname,'r') as f:
-                reply_msg = Template(f.read()).render(
-                    cur_max=cur_words,
-                    prev_max=prev_words
-                )
-
-            data['updated_reply'] = reply_msg
-            data['curr_words'] = cur_words
+        data['updated_reply'] = reply_msg
+        data['curr_words'] = cur_words
 
         return(data)
 

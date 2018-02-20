@@ -88,7 +88,7 @@ def update_reply(submission,comment,data):
     else:
         reply_template_fname = './replyTemplateUpdate.mako'
         cur_words = count_words_max(submission.selftext)
-        prev_words = count_words_max(submission.selftext)
+        prev_words = count_words_max(data['original_reply'])
 
         with open(reply_template_fname,'r') as f:
             reply_msg = Template(f.read()).render(

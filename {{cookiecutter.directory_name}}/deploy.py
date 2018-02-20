@@ -71,9 +71,10 @@ def main(argv):
     lib_dir = os.path.join(root_dir,'data','lib')
     cloudformation_dir = os.path.join(root_dir,'data','cloudformation')
     data_dir = os.path.join(root_dir,'data')
-    project_name = 'paragraphiser'
+    project_name = '{{cookiecutter.botname}}'
+
     code_bucket = '%s-code' % project_name
-    region = 'ap-southeast-2'
+    region = '{{cookiecutter.aws_region}}'
 
     prj = Project(project_name,region,lambda_dir,lib_dir,cloudformation_dir,data_dir,code_bucket,v.stage_name)
     prj.the_lot(v.skip_zip, v.skip_build, v.skip_zip_upload,v.skip_lambda_test)

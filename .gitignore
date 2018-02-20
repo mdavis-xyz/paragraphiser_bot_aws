@@ -2,11 +2,10 @@ env/
 */env/
 muckaround/*
 praw.ini
-data/credentials/*
-artefacts/*
+{{cookiecutter.directory_name}}/data/credentials/*
 */accessKeys.csv
 *.zip
-data/lambda/*/include/*
+{{cookiecutter.directory_name}}/data/lambda/*/include/*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

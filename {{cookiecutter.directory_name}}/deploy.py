@@ -71,7 +71,7 @@ def main(argv):
     lib_dir = os.path.join(root_dir,'data','lib')
     cloudformation_dir = os.path.join(root_dir,'data','cloudformation')
     data_dir = os.path.join(root_dir,'data')
-    project_name = '{{cookiecutter.botname}}'
+    project_name = '{{cookiecutter.bot_name}}'
 
     code_bucket = '%s-code' % project_name
     region = '{{cookiecutter.aws_region}}'

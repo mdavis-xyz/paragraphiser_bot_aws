@@ -1,8 +1,6 @@
 env/
 */env/
 muckaround/*
-praw.ini
-{{cookiecutter.directory_name}}/data/credentials/*
 */accessKeys.csv
 *.zip
 {{cookiecutter.directory_name}}/data/lambda/*/include/*

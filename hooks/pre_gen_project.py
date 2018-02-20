@@ -1,6 +1,6 @@
 import re
 
-bot_name = {{cookiecutter.botname}}
+bot_name = "{{cookiecutter.bot_name}}"
 
 MODULE_REGEX = r'^[a-zA-Z][-a-zA-Z0-9]+$'
 

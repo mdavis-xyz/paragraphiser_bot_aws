@@ -10,7 +10,7 @@ import common
 def lambda_handler(event,contex):
     if ('unitTest' in event) and event['unitTest']:
         print('Running unit tests')
-        common.unit_tests()
+        #common.unit_tests()
         check_latest_batch(dry_run=True)
     else:
         print('Running main (non-test) handler')

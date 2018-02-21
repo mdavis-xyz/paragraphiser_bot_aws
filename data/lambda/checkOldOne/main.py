@@ -11,8 +11,9 @@ import re
 def lambda_handler(event,contex):
     if ('unitTest' in event) and event['unitTest']:
         print('Running unit tests')
-        common.unit_tests()
         test_regex()
+    elif os.environ['enable'] not in [True,'true','True','TRUE',1]:
+        print('Function disabled')
     else:
         print('Running main (non-test) handler')
         return(check_old(event))

@@ -19,8 +19,10 @@ def lambda_handler(event,contex):
     if ('unitTest' in event) and event['unitTest']:
         print('Running unit tests')
         common.unit_tests()
-        common.mako_test()
         look_for_new(dry_run=True)
+        test_eligibility()
+    elif os.environ['enable'] not in [True,'true','True','TRUE',1]:
+        print('Function disabled')
     else:
         print('Running main (non-test) handler')
         return(look_for_new())
@@ -247,3 +249,27 @@ def schedule_checks(post_id,dry_run):
             time.sleep(2/5) # python 3 does this as a float
 
     print('Finished scheduling messages for later for post %s' % post_id)
+
+def test_eligibility():
+    print('Initialising praw for eligibility test')
+    reddit = praw.Reddit('bot1')
+
+    inputs = [
+        ('7yy0lr',False), # long post but many short paragraphs
+        ('7yw9a',False),  # long post but many short paragraphs
+        ('7z2r10',False), # long post but many short paragraphs
+        ('7z3bs2',False), # long post but many short paragraphs
+        ('7z3c0f',False), # long post but many short paragraphs
+        ('75jp3p',True)   # long post, one long paragraph
+    ]
+    for (post_id,eligible) in inputs:
+        print('Getting submission %s' % post_id)
+        submission = reddit.submission(id=post_id)
+        ret = common.generate_reply(submission,debug=True)
+        if eligible:
+            assert(ret != None)
+            assert('original_reply' in ret)
+        else:
+            assert(ret == None)
+
+    print('Finished running eligibility tests')

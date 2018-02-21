@@ -16,13 +16,15 @@ hash_key_val = 'data'
 # bot replies for posts with at least this many characters without a new line
 size_limit = 2300
 
+# to be called by checkForNew
 def unit_tests():
     test_count_words()
     test_split()
+    test_mako()
     return()
 
-# only run from a lambda which has replyTemplateNew.mako
-def mako_test():
+
+def test_mako():
     # using mako library to pass data into the template
     print('Checking that mako works')
     reply_template_fname = './replyTemplateNew.mako'
@@ -48,7 +50,7 @@ def test_split():
 def split_by_paragraph(text):
     # regex because some people write '\n \n' when making a new paragraph
     # or maybe that's dynamodb playing tricks on me
-    paragraphs = re.split('\n\s+\n',text)
+    paragraphs = re.split('\n\s*\n',text)
 
     ## in case there are triple \n
     paragraphs = [p.strip('\n') for p in paragraphs]
@@ -79,17 +81,18 @@ def max_paragraph_size(text):
 # this return dict may other data (1 level deep though)
 # and it will be returned in update_reply when we come back to
 # check how your comment is doing
-def generate_reply(submission):
+def generate_reply(submission,debug=False):
     print('generate_reply called on post %s' % submission.id)
     if (not submission.is_self):
         #print('Submission %s is not eligible for reply because it is not a self post' % submission.id)
         return(None)
     else:
+        print([c for c in submission.selftext[100:130]])
         max_size = max_paragraph_size(submission.selftext)
         if max_size < size_limit:
             #print('Submission %s is not eligible for reply because it is too short' % submission.id)
             return(None)
-        print('Max size in post %s: %d chars, size_limit %d' % (submission.id,max_size,size_limit))
+        print('Max size in post %s: %d chars size_limit %d' % (submission.id,max_size,size_limit))
 
         # using mako library to pass data into the template
         reply_template_fname = './replyTemplateNew.mako'

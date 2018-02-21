@@ -181,6 +181,8 @@ Resources:
                        Ref: "botname"
                    subreddits:
                        "relationship_advice,bottest" # comma separated
+                   enable:
+                       TRUE
       errorAlarmCheckForNew:
          Type: "AWS::CloudWatch::Alarm"
          Properties:
@@ -298,6 +300,8 @@ Resources:
                        Ref: "filteredErrorTopic"
                    bot_name:
                        Ref: "botname"
+                   enable:
+                       TRUE
       errorAlarmCheckOldOne:
          Type: "AWS::CloudWatch::Alarm"
          Properties:

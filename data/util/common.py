@@ -6,6 +6,7 @@ from boto3.dynamodb.conditions import Key, Attr
 import time
 from mako.template import Template
 import string
+import re
 
 # Apparently you can't have a dynamo table with just a
 # sort key. So I'll add an arbitrary hash key to the delay table, which will only have
@@ -17,6 +18,7 @@ size_limit = 2300
 
 def unit_tests():
     test_count_words()
+    test_split()
     return()
 
 # only run from a lambda which has replyTemplateNew.mako
@@ -27,18 +29,50 @@ def mako_test():
     with open(reply_template_fname,'r') as f:
         reply_msg = Template(f.read()).render(num_potatos=1)
 
+def test_split():
+    print('testing paragraph splitter')
+    input = 'first\n \nsecond para\n\n\nthird para\nstill third'
+    expected = ['first','second para','third para\nstill third']
+    actual = split_by_paragraph(input)
+    if expected != actual:
+        print('Error: test failed')
+        print('input: %s' % input)
+        print('expected: %s' % expected)
+        print('actual: %s' % actual)
+    assert(expected == actual)
+    print('paragraph splitter passed')
+
+# takes in a string
+# returns an array of strings
+# In markdown, a single new line character does not create a new paragraph
+def split_by_paragraph(text):
+    # regex because some people write '\n \n' when making a new paragraph
+    # or maybe that's dynamodb playing tricks on me
+    paragraphs = re.split('\n\s+\n',text)
+
+    ## in case there are triple \n
+    paragraphs = [p.strip('\n') for p in paragraphs]
+
+    ## remove any 'paragraphs' which are empty or only whitespace
+    all_white = lambda s: all([c in string.whitespace for c in s]) # True if empty
+    paragraphs = [p for p in paragraphs if (not all_white(p)) or (p == '')]
+
+    return(paragraphs)
+    
+def debug_lengths(text):
+    paragraphs = split_by_paragraph(text)
+
+    data = [{'start':p[0:10],'length':len(p)} for p in paragraphs]
+
+    return(data)
 
 def max_paragraph_size(text):
-    paragraphs = text.split('\n\n') # single line breaks don't render as new paragraph in markdown
-
-    # in case there are triple \n
-    paragraphs = [p.strip('\n') for p in paragraphs]
+    paragraphs = split_by_paragraph(text)
 
     largest_para = max([len(p) for p in paragraphs])
     return(largest_para)
 
-# for posts we have not seen before
-# if you want to ignore this post, return None
+# for posts we have not seen before if you want to ignore this post, return None
 # if you want to comment on this post, return
 # {'original_reply':msg}, where msg is a markdown formatted
 # comment which will be used to generate a reply
@@ -48,14 +82,14 @@ def max_paragraph_size(text):
 def generate_reply(submission):
     print('generate_reply called on post %s' % submission.id)
     if (not submission.is_self):
-        print('Submission %s is not eligible for reply because it is not a self post' % submission.id)
+        #print('Submission %s is not eligible for reply because it is not a self post' % submission.id)
         return(None)
     else:
         max_size = max_paragraph_size(submission.selftext)
-        print('Max size in this post: %d chars, size_limit %d' % (max_size,size_limit))
         if max_size < size_limit:
-            print('Submission %s is not eligible for reply because it is too short' % submission.id)
+            #print('Submission %s is not eligible for reply because it is too short' % submission.id)
             return(None)
+        print('Max size in post %s: %d chars, size_limit %d' % (submission.id,max_size,size_limit))
 
         # using mako library to pass data into the template
         reply_template_fname = './replyTemplateNew.mako'
@@ -80,13 +114,24 @@ def generate_reply(submission):
 # if it contains keys returned before, this latest version's values will be updated
 def update_reply(submission,comment,data):
     assert(submission.is_self)
+
+    # praw is wierd at times
+    x = submission.selftext
+    y = submission.selftext
+    z = submission.selftext
+    assert(x == y == z)
+    assert(type(x) == type(''))
+
     max_size = max_paragraph_size(submission.selftext)
 
     if max_size >= size_limit:
+        print('largest paragraph is %d characters' % max_size)
+        print('Debug lengths:')
+        pp.pprint(debug_lengths(submission.selftext))
         print('Post %s is still eligible for comment, no change' % submission.id)
         return(None)
     else:
-        prev_words = count_words_max(data['original_reply'])
+        prev_words = count_words_max(data['original_post'])
         cur_words = count_words_max(submission.selftext)
 
         reply_template_fname = './replyTemplateUpdate.mako'

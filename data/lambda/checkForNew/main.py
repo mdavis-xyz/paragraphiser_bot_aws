@@ -98,6 +98,7 @@ def reply_and_save(reply,submission,dry_run):
         if dry_run:
             print('Would reply to post %s' % submission.id)
             print('With comment:\n%s' % reply['original_reply'])
+            comment_id = 'fake comment id for testing'
         else:
             try:
                 print('Replying to post %s' % submission.id)

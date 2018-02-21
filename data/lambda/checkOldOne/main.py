@@ -83,8 +83,8 @@ def load_post_info(post_id):
     data_raw = response['Item']['data']['S']
     data = json.loads(data_raw)
 
-    print('Dynamodb data for post %s: comment %s, data:' % (post_id,comment_id))
-    pp.pprint(data)
+    #print('Dynamodb data for post %s: comment %s, data:' % (post_id,comment_id))
+    #pp.pprint(data)
 
     return (data,post_id,comment_id)
 

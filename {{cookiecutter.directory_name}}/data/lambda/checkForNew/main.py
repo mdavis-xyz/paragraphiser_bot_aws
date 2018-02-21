@@ -20,6 +20,7 @@ def lambda_handler(event,contex):
         print('Running unit tests')
         common.unit_tests()
         common.mako_test()
+        test_eligibility()
         look_for_new(dry_run=True)
     else:
         print('Running main (non-test) handler')
@@ -247,3 +248,30 @@ def schedule_checks(post_id,dry_run):
             time.sleep(2/5) # python 3 does this as a float
 
     print('Finished scheduling messages for later for post %s' % post_id)
+
+                                                                         │                                                                                              
+def test_eligibility():                                                                        │                                                                                              
+    print('Initialising praw for eligibility test')                                            │                                                                                              
+    reddit = praw.Reddit('bot1')                                                               │                                                                                              
+         
+    # True if your bot should reply to such a post
+    # False if your bot should not reply          
+
+    posts_to_ignore = "{{cookiecutter.example_posts_bot_shouldnt_reply_to}}".split(',')
+    posts_to_reply = "{{cookiecutter.example_posts_bot_should_reply_to}}".split(',')
+
+    inputs = [(p,True) for p in posts_to_reply]
+    inputs.extent([(p,False) for p in posts_to_ignore])
+
+    for (post_id,eligible) in inputs:                                                          │                                                                                              
+        print('Getting submission %s' % post_id)                                               │                                                                                              
+        submission = reddit.submission(id=post_id)                                             │                                                                                              
+        ret = common.generate_reply(submission,debug=True)                                     │                                                                                              
+        if eligible:                                                                           │                                                                                              
+            assert(ret != None)                                                                │                                                                                              
+            assert('original_reply' in ret)                                                    │                                                                                              
+        else:                                                                                  │                                                                                              
+            assert(ret == None)                                                                │                                                                                              
+                                                                                               │                                                                                              
+    print('Finished running eligibility tests')                                                │                                                                                              
+                                                  

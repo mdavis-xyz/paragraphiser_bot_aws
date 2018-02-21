@@ -7,6 +7,8 @@
     "reddit_client_secret": "",
     "reddit_password": "",
     "reddit_username": "",
-    "user_agent": "{{cookiecutter.bot_name}} v0.1"
+    "user_agent": "{{cookiecutter.bot_name}} v0.1",
+    "example_posts_bot_should_reply_to": "7vmcz3",
+    "example_posts_bot_shouldnt_reply_to": "7wjlmb"
 }
 

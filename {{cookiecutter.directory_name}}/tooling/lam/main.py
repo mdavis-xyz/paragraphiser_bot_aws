@@ -60,12 +60,24 @@ class Lam(object):
             if self.code_bucket not in buckets:
                 print('Bucket %s does not exist, creating it now' % self.code_bucket)
                 response = client.create_bucket(
-                ACL='private',
-                Bucket=self.code_bucket,
-                CreateBucketConfiguration={
-                'LocationConstraint': self.region
-                }
+                    ACL='private',
+                    Bucket=self.code_bucket,
+                    CreateBucketConfiguration={
+                        'LocationConstraint': self.region
+                    }
                 )
+
+                print('Created bucket %s' % self.code_bucket)
+
+                response = client.put_bucket_versioning(
+                    Bucket=self.code_bucket,
+                    VersioningConfiguration={
+                        'MFADelete': 'Disabled',
+                        'Status': 'Enabled'
+                    }
+                )
+
+                print('Versioning turned on for bucket %s' % self.code_bucket)
 
             # list of {'name':x,'return_val':s3version}
             results = self.do_work('upload',self.upload_one)
@@ -414,7 +426,7 @@ class Lam(object):
         client = boto3.client('s3')
 
         # batch delete works on up to 1000 items
-        MAX_ITEMS=1000 
+        MAX_ITEMS=1000
 
         to_delete = [{'Key':x['Key'],'VersionId':x['VersionId']} for x in objs[::MAX_ITEMS]]
 

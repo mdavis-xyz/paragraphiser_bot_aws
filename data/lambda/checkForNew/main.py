@@ -186,10 +186,17 @@ def schedule_checks(post_id,dry_run):
     delays = [
        1, # 1 minute
        2,
+       3,
        4,
+       5,
+       6,
        7,
+       8,
        10,
+       13,
+       16,
        20,
+       25,
        30,
        45,
        1*MIN_PER_H, # 1 hour

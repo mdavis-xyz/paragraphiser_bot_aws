@@ -31,7 +31,7 @@ class CloudFormation(object):
         if not os.path.isfile(fname):
             print(error('Error: I expect a yaml template at %s' % fname))
 
-        self.stack_name = self.project_name + '-' + stage
+        self.stack_name = self.project_name + '-' + self.stage
         print('About to deploy file %s as stack %s' % (fname,self.stack_name))
 
         client = boto3.client('cloudformation')

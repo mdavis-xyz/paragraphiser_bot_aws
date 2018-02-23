@@ -94,6 +94,7 @@ def load_post_info(post_id):
 
     ret = {
         'comment_id': response['Item']['comment_id']['S'],
+        'post_id': response['Item']['post_id']['S'],
         'data': data,
         'downvoted': ('downvoted' in response['Item']['post_id'])
     }
@@ -101,7 +102,7 @@ def load_post_info(post_id):
     #print('Dynamodb data for post %s: comment %s, data:' % (post_id,comment_id))
     #pp.pprint(data)
 
-    return (data,post_id,comment_id)
+    return (ret)
 
 # takes in a praw comment object
 # adds up downvotes and upvotes

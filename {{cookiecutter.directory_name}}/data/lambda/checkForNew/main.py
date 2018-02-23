@@ -31,7 +31,7 @@ def look_for_new(dry_run=False):
 
     reddit = praw.Reddit('bot1')
     subreddits = os.environ['subreddits'].split(',')
-    
+
 
     for sub_name in subreddits:
         print('subreddit: ' + sub_name)
@@ -192,7 +192,7 @@ def schedule_checks(post_id,dry_run):
        30,
        45,
        1*MIN_PER_H, # 1 hour
-       1.5*MIN_PER_H,   
+       1.5*MIN_PER_H,
        2*MIN_PER_H,
        3*MIN_PER_H,
        4*MIN_PER_H,
@@ -206,7 +206,7 @@ def schedule_checks(post_id,dry_run):
        2*MIN_PER_DAY,
        3*MIN_PER_DAY,
        5*MIN_PER_DAY,
-       8*MIN_PER_DAY,  
+       8*MIN_PER_DAY,
        10*MIN_PER_DAY,
        20*MIN_PER_DAY,
        30*MIN_PER_DAY, # 1 month
@@ -249,13 +249,13 @@ def schedule_checks(post_id,dry_run):
 
     print('Finished scheduling messages for later for post %s' % post_id)
 
-                                                                         │                                                                                              
-def test_eligibility():                                                                        │                                                                                              
-    print('Initialising praw for eligibility test')                                            │                                                                                              
-    reddit = praw.Reddit('bot1')                                                               │                                                                                              
-         
+
+def test_eligibility():
+    print('Initialising praw for eligibility test')
+    reddit = praw.Reddit('bot1')
+
     # True if your bot should reply to such a post
-    # False if your bot should not reply          
+    # False if your bot should not reply
 
     posts_to_ignore = "{{cookiecutter.example_posts_bot_shouldnt_reply_to}}".split(',')
     posts_to_reply = "{{cookiecutter.example_posts_bot_should_reply_to}}".split(',')
@@ -263,15 +263,15 @@ def test_eligibility():                                                         
     inputs = [(p,True) for p in posts_to_reply]
     inputs.extent([(p,False) for p in posts_to_ignore])
 
-    for (post_id,eligible) in inputs:                                                          │                                                                                              
-        print('Getting submission %s' % post_id)                                               │                                                                                              
-        submission = reddit.submission(id=post_id)                                             │                                                                                              
-        ret = common.generate_reply(submission,debug=True)                                     │                                                                                              
-        if eligible:                                                                           │                                                                                              
-            assert(ret != None)                                                                │                                                                                              
-            assert('original_reply' in ret)                                                    │                                                                                              
-        else:                                                                                  │                                                                                              
-            assert(ret == None)                                                                │                                                                                              
-                                                                                               │                                                                                              
-    print('Finished running eligibility tests')                                                │                                                                                              
-                                                  
+    for (post_id,eligible) in inputs:
+        print('Getting submission %s' % post_id)
+        submission = reddit.submission(id=post_id)
+        ret = common.generate_reply(submission,debug=True)
+        if eligible:
+            assert(ret != None)
+            assert('original_reply' in ret)
+        else:
+            assert(ret == None)
+
+    print('Finished running eligibility tests')
+

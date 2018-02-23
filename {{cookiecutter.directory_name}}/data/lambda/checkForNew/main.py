@@ -261,7 +261,7 @@ def test_eligibility():
     posts_to_reply = "{{cookiecutter.example_posts_bot_should_reply_to}}".split(',')
 
     inputs = [(p,True) for p in posts_to_reply]
-    inputs.extent([(p,False) for p in posts_to_ignore])
+    inputs.extend([(p,False) for p in posts_to_ignore])
 
     for (post_id,eligible) in inputs:
         print('Getting submission %s' % post_id)

@@ -133,6 +133,9 @@ def update_reply(submission,comment,data):
         pp.pprint(debug_lengths(submission.selftext))
         print('Post %s is still eligible for comment, no change' % submission.id)
         return(None)
+    elif submission.selftext == '[removed]':
+        print('Submission %s was deleted, don\'t update comment')
+        return(None)
     else:
         prev_words = count_words_max(data['original_post'])
         cur_words = count_words_max(submission.selftext)

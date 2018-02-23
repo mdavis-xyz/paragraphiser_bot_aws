@@ -28,7 +28,9 @@ def check_old(event):
         raise(e)
 
     print('Getting data from dynamodb')
-    (data,post_id,comment_id) = load_post_info(post_id)
+    post_info = load_post_info(post_id)
+    post_id = post_info['post_id']
+    comment_id = post_info['comment_id']
 
     print('Initialising praw')
     reddit = praw.Reddit('bot1')
@@ -44,7 +46,7 @@ def check_old(event):
     else:
         prev_comment = data['original_reply']
         
-    ret = common.update_reply(submission,comment,data)
+    ret = common.update_reply(submission,comment,post_info['data'])
 
     if (ret != None) and (ret['updated_reply'] != prev_comment):
         print('Updating comment %s for post %s' % (comment_id,post_id))
@@ -52,16 +54,24 @@ def check_old(event):
         print(ret['updated_reply'])
         comment.edit(ret['updated_reply'])
 
-    # now check votes
-    print('Checking score')
-    net_score = get_net_score(comment)
+    if not post_info['downvoted']:
 
-    if net_score < 0:
-        print('Comment %s has negative reaction' % comment.id)
-        send_alert(comment,net_score)
+        # now check votes
+        print('Checking score')
+        net_score = get_net_score(comment)
+
+        if net_score < 0:
+            print('Comment %s has negative reaction' % comment.id)
+            send_alert(comment,net_score)
+            save_alert_history(post_id)
+
+    else:
+        print('This post has already been downvoted')
+        print('Developer has already been sent an email, so don\'t check again')
 
 # takes in id of a post
-# returns (data,post_id,comment_id)
+# returns dict of the corresponding item in dynamodb
+# keys: data,post_id,comment_id,downvoted
 # where data is a dict of what common.generate_reply returned for that post
 def load_post_info(post_id):
     table_name = os.environ['post_history_table']
@@ -78,11 +88,14 @@ def load_post_info(post_id):
         },
         ConsistentRead=False, # cheaper
     )
-    
     assert(post_id == response['Item']['post_id']['S'])
-    comment_id = response['Item']['comment_id']['S']
-    data_raw = response['Item']['data']['S']
-    data = json.loads(data_raw)
+
+    ret = {
+        'comment_id': response['Item']['comment_id']['S'],
+        'data_raw': response['Item']['data']['S'],
+        'data': json.loads(data_raw),
+        'downvoted': ('downvoted' in response['Item']['post_id'])
+    }
 
     #print('Dynamodb data for post %s: comment %s, data:' % (post_id,comment_id))
     #pp.pprint(data)
@@ -172,3 +185,27 @@ def send_alert(comment,net_score):
     )
     
     print('sns message sent')
+
+# saves a key 'downvoted' into the post info table
+# under this post id
+def save_alert_history(post_id):
+    table_name = os.environ['post_history_table']
+    client = boto3.client('dynamodb')
+
+    print('Saving that post %s was downvoted' % post_id)
+
+    response = client.update_item(
+        TableName=table_name,  
+        Key={
+            'post_id':{'S':post_id}
+        },
+        AttributeUpdates={
+            'downvoted':{
+                'Value':{
+                    'BOOL':True
+                }
+            }
+        }
+    )
+
+    print('Saved that post %s was downvoted' % post_id)

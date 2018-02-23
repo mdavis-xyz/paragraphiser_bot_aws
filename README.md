@@ -42,7 +42,16 @@ You want to send an SMS whenever your bot spots a certain type of post?
 That's easy, just modify the cloudformation template.
 You want to use an image recognition API? Same again, it's far easier than with other tools.
 
+This tooling parallelises all aspects of lambda deployment:
+ * virtual environment creation
+ * zipping
+ * uploading
+ * testing
+
 ## How To Use It
+
+Let's start by just installing the template potatobot.
+It responds to self posts in r/bottest which contain the word `potato`.
 
 1. This repo is a [cookiecutter](https://cookiecutter.readthedocs.io/en/latest/index.html) template. Install the `cookiecutter` library.
 (Typically with `pip install cookiecutter` or `pip install cookiecutter --user`)
@@ -62,6 +71,38 @@ You want to use an image recognition API? Same again, it's far easier than with 
 
 The template bot scans self posts in r/bottest, and comments on that post if it contains the word 'potato'. If that post is later edited, it updates the comment.
 
+* Set up your local machine with the credentials of your aws account if you haven't already, using `aws configure`
+
+Let's install the python packages we need for the tooling.
+* Run `./makeForDeploy.sh` in a terminal. (Alternatively just install the `boto3` library into your OS)
+* This will create a virtual environment in `./env`
+* Activate this virtual environment with `. ./env/bin/activate`
+
+This template comes with a fully fledged AWS deployment tooling. It's more general than just reddit bots or just lambda functions. Read 'How it works' to understand the detail'.
+
+You can deploy to different stages (e.g. `dev` vs `prod`). If you don't know what that means, just use `dev`.
+
+To deploy the bot:
+
+* run `python deploy.py -s dev`
+   * `-s dev` tells the system to deploy to the dev stage. You can replace `dev` with `prod` or any other string.
+   * This could take 5 minutes if it's your first run
+
+You should see all green when the command finishes.
+
+Submit a post in r/bottest and wait for the bot to respond. It's currently polling for new posts every 10 minutes, so you may have to wait 10 minutes.
+
+If you don't want to wait for 10 minutes:
+
+* log into the AWS console in a browser
+* go to Lambda
+* search for `checkForNew`
+* Select the corresponding lambda
+* trigger it (you'll have to set up a 'test' configuration. This is fairly straightforward. Just use the default payload, or an empty payload.)
+* If you see red in the console, read the error message there, then redeploy. For more advanced debugging methods, read 'Debugging and logs'
+
+## Customise the logic
+
 To change what the criteria is, go into `data/util/common.py`.
  * `generate_reply` takes in a [praw submission](https://praw.readthedocs.io/en/latest/code_overview/reddit_instance.html?highlight=submission#praw.Reddit.submission) object. ([praw](https://praw.readthedocs.io/en/latest/index.html) is the library used to talk to the reddit API).
    * `submission.id` is the unique identifier of each post. This is a short string which appears in the url in your browser when you look at the post.
@@ -76,37 +117,6 @@ To change what the criteria is, go into `data/util/common.py`.
  * Add any tests you want to do to validate your code into the `unit_tests` function in `data/util/common.py`
  * The example uses a [mako](http://www.makotemplates.org/) template to put data into the reply. Look at the code for `update_reply` to see how this works. The files of the templates are `data/util/replyTemplateNew.mako` and `replyTemplateUpdate.mako`
 
-Let's install the python packages we need for the tooling.
-* Run `./makeForDeploy.sh` in a terminal
-* This will create a virtual environment in `./env`
-* Activate this virtual environment with `. ./env/bin/activate`
-* Set up your local machine with the credentials of your aws account if you haven't already, using `aws configure`
-
-
-## Deployment
-
-This template comes with a fully fledged AWS deployment tooling. It's more general than just reddit bots or just lambda functions. Read 'How it works' to understand the detail'.
-
-You can deploy to different stages (e.g. `dev` vs `prod`).
-
-To deploy the bot:
-
-* activate the virtual environment mentioned before (alternatively you could just install the `boto` python package onto your system)
-* from the directory with `deploy.py`, run `python deploy.py -s dev`
-   * `-s dev` tells the system to deploy to the dev stage. You can replace `dev` with `prod` or any other string.
-   * This could take 5 minutes if it's your first run
-
-You should see all green when the command finishes.
-
-Submit a post in r/bottest and wait for the bot to respond. It's currently polling for new posts every 10 minutes.
-If you don't want to wait for 10 minutes:
-
-* log into the AWS console in a browser
-* go to Lambda
-* search for `checkForNew`
-* Select the corresponding lambda
-* trigger it (you'll have to set up a 'test' configuration. This is fairly straightforward. Just use the default payload, or an empty payload.)
-* If you see red in the console, read the error message there, then redeploy. For more advanced debugging methods, read 'Debugging and logs'
 
 ## Development
 

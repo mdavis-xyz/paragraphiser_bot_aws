@@ -1,47 +1,5 @@
 # Matt's Reddit Bot Template
 
-This is a template for making reddit bots in python, and deploying them to AWS Lambda.
-
-## Why Use This Template
-
-### Bot Logic
-
-This bot template has some nice features:
-
-* Everything is already set up ready to go. You just:
-  1. run the cookiecutter template (explained below)
-  1. set up Amazon cloud credentials on your computer
-  1. run the deployment script
- Bam! Now you have a working reddit bot. This particular reddit bot looks at `r/bottest` and responds to any self post that mentions the word potato. Now you can just go look at that specific potato logic, see how it works, and change it into what you want your bot to do. That's easier than writing everything yourself.
-
-This bot also checks up on comments after it makes them.
-If your bot's comment gets downvoted to negative infinity, you'd want to know.
-This system sends you an email when your comment gets downvoted to negative.
-
-This bot also checks on the post you commented on, after you comment.
-Perhaps the submitter read your comment and changed their post.
-You may want to update your comment to avoid looking silly.
-
-It checks up on comments very frequently for new comments, and less frequently for old comments.
-This is to provide the perfect compromise between low latency updates, and not using the reddit API too much. (You'll get throttled if you try to check up on all your bot's posts, every minute)
-
-
-### Tooling and Infrastructure
-
-Running your own server can be a lot of hassle, and results in downtime, and hardware costs.
-I initially ran my bot on a beaglebone server, but a lightening strike in my street broke the server.
-For most bots, you can run using serverless Lambda functions in Amazon's cloud, and you won't have to pay. (They have a free usage tier)
-
-If you don't know what Amazon's "Lambda functions" are: You give them code, and they run it. You don't need to worry about an operating system (`sudo apt-get install blah`). You don't need to worry about scaling. If your reddit bot wants to comment on a thousand posts per second today, and nothing tomorrow, Amazon will happily handle that. (Reddit will definitely throttle that, but my point is that you don't need to worry about scaling, and you only pay for the seconds of computation that you use.)
-
-You can try to run a simple script as a cron job on a simple server.
-As mentioned earlier, there are downsides to a physical server, and a virtual machine is more expensive than lambda functions.
-
-This tooling is very customisable, and can be extended to use any AWS resource.
-You want to send an SMS whenever your bot spots a certain type of post?
-That's easy, just modify the cloudformation template.
-You want to use an image recognition API? Same again, it's far easier than with other tools.
-
 ## How To Use It
 
 1. This repo is a [cookiecutter](https://cookiecutter.readthedocs.io/en/latest/index.html) template. Install the `cookiecutter` library.
@@ -112,8 +70,8 @@ If you don't want to wait for 10 minutes:
 
 The full deployment can take about 5 minutes, which is a frustratingly long deployment cycle. You can skip steps. There are 4 steps:
 
-1. The virtual environment of each lambda function is built by executing the `makescript.sh` file within each lambda function's folder in `data/lambda/`. You only need to run this if you have modified the `makescript.sh` file (to add new python libraries), or modified anything in `data/util` or `data/credentials` (which gets copied in to the `data/lambda/x/include` folders). If you have not done either of those things since your last deployment, use the `-b` flag. e.g. `python deploy.sh -s prod -b`
-1. Each lambda gets zipped up into a `.zip` file. If you have modified the python code in any `data/lambda/x/main.py` file, then you need to do this step. If you needed to do the previous step, then you need to do this step. Otherwise you can skip this step with the `-z` flag. e.g. `python deploy.py -s prod -bz`.
+1. The virtual environment of each lambda function is built by executing the `makescript.sh` file within each lambda function's folder in `data/lambda/`. You only need to run this if you have modified the `makescript.sh` file (to add new python libraries), or modified anything in `data/util` or `data/credentials` (which gets copied in to the `data/lambda/$LAMBDA/include` folders). If you have not done either of those things since your last deployment, use the `-b` flag. e.g. `python deploy.sh -s prod -b`
+1. Each lambda gets zipped up into a `.zip` file. If you have modified the python code in any `data/lambda/$LAMBDA/main.py` file, then you need to do this step. If you needed to do the previous step, then you need to do this step. Otherwise you can skip this step with the `-z` flag. e.g. `python deploy.py -s prod -bz`.
 1. The zip of each lambda gets uploaded to S3. If you needed to do either of the previous steps, you need to do this step. If you only changed the cloudformation template (`data/cloudformation/stack.yaml`), then you can skip this step with the `-u` flag. e.g. `python deploy.py -s prod -bzu`
 1. The cloudformation script is applied to the stack. The deployment script pushes whatever is the latest version of each zip from S3. (This is something normal cloudformation does not do. A benefit of using this tooling.) This step can't be skipped, it is compulsory. Unfortunately this step is very super quick.
 
@@ -127,7 +85,7 @@ If you want the bot to be active in multiple subreddits, seperate them with a co
 ## Debugging and Logs
 
 There are unit tests which are conducted whenever a lambda is deployed. If the tests fail, you will be told, and will see the output of one of the tests.
-In the `main.py` file for each lambda (`data/lambda/x/main.py`) there is a function called `lambda_handler()`. The general format is:
+In the `main.py` file for each lambda (`data/lambda/$LAMBDA/main.py`) there is a function called `lambda_handler()`. The general format is:
 
 ```
 def lambda_handler(event,contex):
@@ -145,7 +103,7 @@ with all the same permissions as normal.
 When the tests fail, you will see the output of one of the failed tests printed by the deployment tooling.
 If you want to see more detailed logs of the tests, or of the production invocations,
 open up AWS in your browser, and go to Cloudwatch. Select *Logs*, then filter by
-`/aws/lambda/<botname>-stack-`.
+`/aws/lambda/{{cookiecutter.bot_name}}-stack-`.
 
 ## How it works
 
@@ -157,10 +115,10 @@ There are 5 lambda functions.
    * This polls reddit every 10 minutes for new posts. This frequency is set in `data/cloudformation/stack.yaml`
    * Each new post is passed to `util/common.py` `generate_reply()` to determine whether the bot should reply to it or not. If so:
       * the bot replies
-      * data about the post and the reply is saved in the `botname-stack-postHistory` `dynamodb` table
-      * many entries are saved in the `botname-stack-schedule` table. One for each time that the bot should come back and check the comment and the post. One feature of this system is that these checks are very frequent for new comments, and less frequent for old comments. The large integer in the index of this table is a unix timestamp.
+      * data about the post and the reply is saved in the `{{cookiecutter.bot_name}}-stack-postHistory` `dynamodb` table
+      * many entries are saved in the `{{cookiecutter.bot_name}}-stack-schedule` table. One for each time that the bot should come back and check the comment and the post. One feature of this system is that these checks are very frequent for new comments, and less frequent for old comments. The large integer in the index of this table is a unix timestamp.
 * poll
-   * every 60 seconds this function looks at what's in `botname-stack-schedule`. If there are any timestamps in the past or within the next 60 seconds, this bot checks the posts corresponding to those timestamps. (Duplicates merged) It doesn't check it directly. For each post, `poll` invokes `checkOldOne` with a payload that contains one post id.
+   * every 60 seconds this function looks at what's in `{{cookiecutter.bot_name}}-stack-schedule`. If there are any timestamps in the past or within the next 60 seconds, this bot checks the posts corresponding to those timestamps. (Duplicates merged) It doesn't check it directly. For each post, `poll` invokes `checkOldOne` with a payload that contains one post id.
 * checkOldOne
    * This is invoked by `poll`. Or can be manually invoked with a payload of `{"post_id":"xxxxxxx"}` if you want to check on a particular post. (Where `xxxxxxx` is the post id in the url of that submission)
    * This checks whether your bot's comment on that post was downvoted below 0. If so you get sent an email.
@@ -188,7 +146,7 @@ Here's how it works:
 ## Security
 
 I tried to handle the secrets for reddit properly. I really did. But it's bloody hard to pass secrets into Amazon's lambda function with enterprise-grade security. Amazon's key handler is really confusing to use.
-So I gave up and just saved the credentials for reddit in `credentials/praw.ini`, which is copied into `data/lambda/checkForOne/include/praw.ini` and `data/lambda/checkOldOne/include/praw.ini` by the deployment tooling. Then it's added to the zip file for the lambda function.
+So I gave up and just saved the credentials for reddit  in `credentials/praw.ini`, which is copied into `data/lambda/checkForOne/include/praw.ini` and `data/lambda/checkOldOne/include/praw.ini` by the deployment tooling. Then it's added to the zip file for the lambda function.
 This is kind of bad practice, but hey, this is just a reddit bot. That's why you should make a new reddit user just for the bot, and not use the same password anywhere else.
 
 The AWS IAM permissions of the resources are very loose. I was too lazy to tighten them. (If you feel up for it, go change `ExecutionRole` in `data/cloudformation/stack.yaml`).

@@ -90,10 +90,11 @@ def load_post_info(post_id):
     )
     assert(post_id == response['Item']['post_id']['S'])
 
+    data = json.loads(response['Item']['data']['S'])
+
     ret = {
         'comment_id': response['Item']['comment_id']['S'],
-        'data_raw': response['Item']['data']['S'],
-        'data': json.loads(data_raw),
+        'data': data,
         'downvoted': ('downvoted' in response['Item']['post_id'])
     }
 

@@ -266,7 +266,7 @@ def test_eligibility():
     for (post_id,eligible) in inputs:
         print('Getting submission %s' % post_id)
         submission = reddit.submission(id=post_id)
-        ret = common.generate_reply(submission,debug=True)
+        ret = common.generate_reply(submission)
         if eligible:
             assert(ret != None)
             assert('original_reply' in ret)

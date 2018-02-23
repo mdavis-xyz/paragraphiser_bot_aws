@@ -29,6 +29,7 @@ def check_old(event):
 
     print('Getting data from dynamodb')
     post_info = load_post_info(post_id)
+    data = post_info['data']
     post_id = post_info['post_id']
     comment_id = post_info['comment_id']
 
@@ -46,7 +47,7 @@ def check_old(event):
     else:
         prev_comment = data['original_reply']
         
-    ret = common.update_reply(submission,comment,post_info['data'])
+    ret = common.update_reply(submission,comment,data)
 
     if (ret != None) and (ret['updated_reply'] != prev_comment):
         print('Updating comment %s for post %s' % (comment_id,post_id))

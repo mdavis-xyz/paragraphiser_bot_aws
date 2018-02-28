@@ -97,7 +97,7 @@ def load_post_info(post_id):
         'comment_id': response['Item']['comment_id']['S'],
         'post_id': response['Item']['post_id']['S'],
         'data': data,
-        'downvoted': ('downvoted' in response['Item']['post_id'])
+        'downvoted': ('downvoted' in response['Item'])
     }
 
     #print('Dynamodb data for post %s: comment %s, data:' % (post_id,comment_id))

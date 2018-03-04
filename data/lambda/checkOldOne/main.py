@@ -55,6 +55,8 @@ def check_old(event):
         print(ret['updated_reply'])
         comment.edit(ret['updated_reply'])
 
+        update_data(ret,post_id)
+
     if not post_info['downvoted']:
 
         # now check votes
@@ -188,6 +190,29 @@ def send_alert(comment,net_score):
     )
     
     print('sns message sent')
+
+def update_data(data,post_id):
+    table_name = os.environ['post_history_table']
+    client = boto3.client('dynamodb')
+
+    print('Updating data for post %s' % post_id)
+
+    response = client.update_item(
+        TableName=table_name,  
+        Key={
+            'post_id':{'S':post_id}
+        },
+        AttributeUpdates={
+            'data':{
+                'Value':{
+                    'S':json.dumps(data)
+                }
+            }
+        }
+    )
+
+    print('Saved updated data')
+
 
 # saves a key 'downvoted' into the post info table
 # under this post id

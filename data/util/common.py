@@ -64,7 +64,7 @@ def split_by_paragraph(text):
 def debug_lengths(text):
     paragraphs = split_by_paragraph(text)
 
-    data = [{'start':p[0:10],'length':len(p)} for p in paragraphs]
+    data = [{'start':p[0:10],'length':len(p),'words':count_words(p)} for p in paragraphs]
 
     return(data)
 
@@ -148,6 +148,7 @@ def update_reply(submission,comment,data):
                 prev_max=prev_words
             )
 
+        data['updated_post'] = submission.selftext
         data['updated_reply'] = reply_msg
         data['curr_words'] = cur_words
 
@@ -155,15 +156,15 @@ def update_reply(submission,comment,data):
 
 # returns the number of words in the longest paragraph
 def count_words_max(text):
-    paragraphs = text.split('\n\n') # one \n renders as the same paragraph in markdown
+    #paragraphs = text.split('\n\n') # one \n renders as the same paragraph in markdown
 
-    # in case there's 3 new line characters, remove 1 on the ends
-    paragraphs = [p.strip('\n') for p in paragraphs]
+    ## in case there's 3 new line characters, remove 1 on the ends
+    #paragraphs = [p.strip('\n') for p in paragraphs]
 
-    # if there's a single new line character, replace it with a normal space, because it's a word break
-    paragraphs = [p.replace('\n',' ') for p in paragraphs]
+    ## if there's a single new line character, replace it with a normal space, because it's a word break
+    #paragraphs = [p.replace('\n',' ') for p in paragraphs]
     
-    lengths = [count_words(p) for p in paragraphs]
+    lengths = [count_words(p) for p in split_by_paragraph(text)]
     return(max(lengths))
 
 # returns the number of words, assuming this is one paragraph

@@ -8,12 +8,15 @@ import common
 
 
 def lambda_handler(event,contex):
+    print('Warning: this function doesnt work as lambda. It takes to long')
+    print('TODO: rewrite this to paginate dynamodb calls, then invoke itself')
     if ('unitTest' in event) and event['unitTest']:
         print('Running unit tests')
         #common.unit_tests()
-        recheck_all(dry_run=True)
+        #recheck_all(dry_run=True)
     else:
         print('Running main (non-test) handler')
+        assert(NotImplementedError)
         return(recheck_all(dry_run=False))
 
 def recheck_all(dry_run=False):
@@ -35,6 +38,7 @@ def recheck_all(dry_run=False):
 
     print('done')
 
+# delay is measured in minutes
 def schedule_check(post_id,delay,dry_run):
 
     client = boto3.client('dynamodb')
@@ -48,9 +52,9 @@ def schedule_check(post_id,delay,dry_run):
     then = now + delay*SEC_PER_MIN
 
     if dry_run:
-        print('Would schedule post %s for delay %d minutes' % (post_id,delay))
+        print('Would schedule post %s for delay %.1f minutes' % (post_id,delay))
     else:
-        print('scheduling post %s for delay %d minutes' % (post_id,delay))
+        print('scheduling post %s for delay %.1f minutes' % (post_id,delay))
         client.update_item(
             TableName=table_name,
             Key={'time':{'N':str(then)},'hash':{'S':common.hash_key_val}},

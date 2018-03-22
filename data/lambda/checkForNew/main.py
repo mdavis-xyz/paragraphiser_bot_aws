@@ -13,6 +13,11 @@ SEC_PER_H = SEC_PER_MIN * MIN_PER_H
 H_PER_DAY = 24
 MIN_PER_DAY = H_PER_DAY * MIN_PER_H
 SEC_PER_DAY = H_PER_DAY * SEC_PER_H
+DAYS_PER_YEAR = 365
+MIN_PER_YEAR = MIN_PER_DAY * DAYS_PER_YEAR
+H_PER_YEAR = H_PER_DAY * DAYS_PER_YEAR
+SEC_PER_YEAR = SEC_PER_DAY * DAYS_PER_YEAR
+
 
 
 def lambda_handler(event,contex):
@@ -182,53 +187,17 @@ def keys_exist(ids):
 
 def schedule_checks(post_id,dry_run):
 
-    # minutes
-    delays = [
-       1, # 1 minute
-       2,
-       3,
-       4,
-       5,
-       6,
-       7,
-       8,
-       9,
-       10,
-       11,
-       12,
-       13,
-       14,
-       16,
-       18,
-       20,
-       22,
-       25,
-       30,
-       45,
-       1*MIN_PER_H, # 1 hour
-       1.5*MIN_PER_H,   
-       2*MIN_PER_H,
-       3*MIN_PER_H,
-       4*MIN_PER_H,
-       5*MIN_PER_H,
-       7*MIN_PER_H,
-       10*MIN_PER_H,
-       14*MIN_PER_H,
-       18*MIN_PER_H,
-       1*MIN_PER_DAY, # 1 day
-       1.5*MIN_PER_DAY,
-       2*MIN_PER_DAY,
-       3*MIN_PER_DAY,
-       5*MIN_PER_DAY,
-       8*MIN_PER_DAY,  
-       10*MIN_PER_DAY,
-       20*MIN_PER_DAY,
-       30*MIN_PER_DAY, # 1 month
-       50*MIN_PER_DAY,
-       100*MIN_PER_DAY,
-       365*MIN_PER_DAY # 1 year
-    ]
-
+     # minutes
+    delays = [x for x in range(int(2*MIN_PER_H))] + \
+             [x for x in range(int(2*MIN_PER_H)+1,int(4*MIN_PER_H),2)] +  \
+             [x for x in range(int(4*MIN_PER_H)+1,int(8*MIN_PER_H),10)] +  \
+             [x for x in range(int(8*MIN_PER_H)+1,int(12*MIN_PER_H),30)] +  \
+             [x for x in range(int(12*MIN_PER_H)+1,int(MIN_PER_DAY),MIN_PER_H)] +  \
+             [x for x in range(int(MIN_PER_DAY)+1,int(2*MIN_PER_DAY),2*MIN_PER_H)] +  \
+             [x for x in range(int(2*MIN_PER_DAY)+1,int(4*MIN_PER_DAY),4*MIN_PER_H)] +  \
+             [x for x in range(int(4*MIN_PER_DAY)+1,int(10*MIN_PER_DAY),MIN_PER_H)] +  \
+             [x for x in range(int(10*MIN_PER_DAY)+1,int(100*MIN_PER_DAY),5*MIN_PER_DAY)] + \
+             [x for x in range(int(100*MIN_PER_DAY)+1,int(2*MIN_PER_YEAR),30*MIN_PER_DAY)]
 
     delays = [int(x) for x in delays] # rounding
 

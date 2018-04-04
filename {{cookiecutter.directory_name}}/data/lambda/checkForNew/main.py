@@ -15,7 +15,7 @@ MIN_PER_DAY = H_PER_DAY * MIN_PER_H
 SEC_PER_DAY = H_PER_DAY * SEC_PER_H
 
 
-def lambda_handler(event,contex):
+def lambda_handler(event,context):
     if ('unitTest' in event) and event['unitTest']:
         print('Running unit tests')
         common.unit_tests()

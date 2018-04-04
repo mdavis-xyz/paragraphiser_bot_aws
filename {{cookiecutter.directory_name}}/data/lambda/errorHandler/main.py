@@ -7,7 +7,7 @@ import json
 def unit_tests():
     print('No unit tests to run')
 
-def lambda_handler(event,contex):
+def lambda_handler(event,context):
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
     if ('unitTest' in event) and event['unitTest']:

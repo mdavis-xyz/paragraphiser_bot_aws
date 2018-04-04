@@ -7,7 +7,7 @@ import json
 import common
 
 
-def lambda_handler(event,contex):
+def lambda_handler(event,context):
     if ('unitTest' in event) and event['unitTest']:
         print('Running unit tests')
         common.unit_tests()

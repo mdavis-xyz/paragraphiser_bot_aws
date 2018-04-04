@@ -26,8 +26,10 @@ pip install mako # dependency of common.py
 rm -rf include
 mkdir include
 # cp $1/credentials/praw.ini include/praw.ini
-cp $1/util/common.py include/common.py
-
+for DEP in common.py errors.py
+do
+    cp $1/util/$DEP include/$DEP 
+done
 deactivate
 
 echo 'makescript returning sucessfully'

@@ -9,9 +9,6 @@ Parameters:
       codebucket:
           Type: String
           Description: S3 bucket where lambda code should be saved
-      checkForNewS3Version:
-          Type: String
-          Description: Version of the zip for checkForNew
       checkOldOneS3Version:
           Type: String
           Description: Version of the zip for checkOldOne
@@ -24,12 +21,9 @@ Parameters:
       failerS3Version:
           Type: String
           Description: Version of the zip for failer
-      checkAllS3Version:
+      checkForNewS3Version:
           Type: String
-          Description: Version of the zip for checkAll
-      statsS3Version:
-          Type: String
-          Description: Version of the zip for stats
+          Description: Version of the zip for checkForNew
 
 
 Resources:
@@ -189,6 +183,9 @@ Resources:
                        "relationship_advice,bottest" # comma separated
                    enable:
                        TRUE
+                   errorHandlerArn:
+                       Fn::GetAtt: ["errorHandler", "Arn"]
+
       errorAlarmCheckForNew:
          Type: "AWS::CloudWatch::Alarm"
          Properties:
@@ -209,31 +206,6 @@ Resources:
            Statistic: Sum
            Threshold: 1
            TreatMissingData: "notBreaching"
-
-      #######################
-      # checkAll
-      # recheck all posts we've replied to
-      #######################
-
-      checkAll:
-          Type: AWS::Lambda::Function
-          Properties:
-            #FunctionName: !Join [ "-", [ !Ref "botname", "checkAll"] ]
-            Code:
-              S3Bucket: !Ref "codebucket"
-              S3Key: !Join [ "/", [ !Ref "stage", "checkAll.zip"] ]
-              S3ObjectVersion: !Ref "checkAllS3Version"
-            Handler: main.lambda_handler
-            Runtime: python3.6
-            Timeout: 300
-            Role:
-                "Fn::GetAtt": ["ExecutionRole", "Arn"]
-            Environment:
-                Variables:
-                   schedule_table:
-                       Ref: "scheduleTable"
-                   post_history_table:
-                       Ref: "postHistoryTable"
 
       #######################
       # poll
@@ -284,6 +256,9 @@ Resources:
                        Ref "botname"
                    checkOldArn:
                        Fn::GetAtt: ["checkOldOne", "Arn"]
+                   errorHandlerArn:
+                       Fn::GetAtt: ["errorHandler", "Arn"]
+
       errorAlarmPoll:
          Type: "AWS::CloudWatch::Alarm"
          Properties:
@@ -333,6 +308,9 @@ Resources:
                        Ref: "botname"
                    enable:
                        TRUE
+                   errorHandlerArn:
+                       Fn::GetAtt: ["errorHandler", "Arn"]
+
       errorAlarmCheckOldOne:
          Type: "AWS::CloudWatch::Alarm"
          Properties:
@@ -358,23 +336,25 @@ Resources:
       # Stats
       #######################
 
-      stats:
-          Type: AWS::Lambda::Function
-          Properties:
-            #FunctionName: !Join [ "-", [ !Ref "botname", "failer"] ]
-            Code:
-              S3Bucket: !Ref "codebucket"
-              S3Key: !Join [ "/", [ !Ref "stage", "stats.zip"] ]
-              S3ObjectVersion: !Ref "statsS3Version"
-            Handler: main.lambda_handler
-            Runtime: python3.6
-            Timeout: 60
-            Role:
-                "Fn::GetAtt": ["ExecutionRole", "Arn"]
-            Environment:
-                Variables:
-                   post_history_table:
-                       Ref: "postHistoryTable"
+#      stats:
+#          Type: AWS::Lambda::Function
+#          Properties:
+#            #FunctionName: !Join [ "-", [ !Ref "botname", "failer"] ]
+#            Code:
+#              S3Bucket: !Ref "codebucket"
+#              S3Key: !Join [ "/", [ !Ref "stage", "stats.zip"] ]
+#              S3ObjectVersion: !Ref "statsS3Version"
+#            Handler: main.lambda_handler
+#            Runtime: python3.6
+#            Timeout: 60
+#            Role:
+#                "Fn::GetAtt": ["ExecutionRole", "Arn"]
+#            Environment:
+#                Variables:
+#                   post_history_table:
+#                       Ref: "postHistoryTable"
+#                   errorHandlerArn:
+#                       Fn::GetAtt: ["errorHandler", "Arn"]
 
 
       #######################
@@ -405,6 +385,7 @@ Resources:
                        Ref: "AWS::StackName"
                    filtered_error_topic:
                        Ref: "filteredErrorTopic"
+
       failer:
           Type: AWS::Lambda::Function
           Properties:
@@ -418,6 +399,10 @@ Resources:
             Timeout: 60
             Role:
                 "Fn::GetAtt": ["ExecutionRole", "Arn"]
+            Environment:
+                Variables:
+                   errorHandlerArn:
+                       Fn::GetAtt: ["errorHandler", "Arn"]
       errorAlarmFailer:
          Type: "AWS::CloudWatch::Alarm"
          Properties:

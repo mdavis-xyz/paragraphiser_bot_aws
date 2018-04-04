@@ -7,7 +7,7 @@ import json
 def unit_tests():
     print('No unit tests to run')
 
-def lambda_handler(event,contex):
+def lambda_handler(event,context):
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
     if ('unitTest' in event) and event['unitTest']:
@@ -17,6 +17,26 @@ def lambda_handler(event,contex):
     else:
         logger.info('Running main (non-test) handler')
         error_handler(logger,event)
+
+
+def error_handler(logger,event):
+    # TODO: check whether we've already sent a message
+    if ('Records' in event) and (type(event) != type('')): # SNS with general alarm
+        logger.info('invoked from SNS alarm')
+        logger.info('%d alarms' % len(event))
+        for rec in event['Records']:
+            logger.info('record is:')
+            logger.info(pp.pformat(event))
+            msg_core = json.loads(rec['Sns']['Message'])['AlarmDescription']
+            msg_full = 'A problem has occured with your %s reddit bot.\n\n%s' % (bot_name,msg_core)
+            handle(logger,msg_full,msg_core)
+    else: # direct invocation from try/except
+        assert('error_type' in event)
+        assert(event['error_type'] == 'direct invocation from traceback')
+        logger.info('was directly invoked')
+        msg_full = 'Lambda %s failed' % event['lambda_name']
+        msg_full += '\n\nFull Traceback:\n\n%s' % event['traceback']
+        handle(logger,msg_full,event['lambda_name'])
 
 # returns an int of the time the stack was last updated
 def stack_timestamp():
@@ -32,22 +52,17 @@ def stack_timestamp():
     print('Stack %s was last updated at %d' % (stack_name,stack_timestamp))
     return(stack_timestamp)
 
-def error_handler(logger,event):
-    # TODO: check whether we've already sent a message
-    bot_name = os.environ['bot_name']
-    for rec in event['Records']:
-        logger.info('record is:')
-        logger.info(pp.pformat(event))
-        msg_core = json.loads(rec['Sns']['Message'])['AlarmDescription']
-        if not msg_already_sent(logger,msg_core):
-            print('New message: %s' % msg_core)
-            msg = 'A problem has occured with your %s reddit bot.\n\n%s' % (bot_name,msg_core)
-            send_msg(logger,msg)
-            save_to_table(logger,msg_core)
-        else:
-            print('Error message: %s' % msg_core)
-            print('We\'ve already sent that message. Don\'t do anything')
-        
+def handle(logger,msg_full,msg_hash):
+    if not msg_already_sent(logger,msg_hash):
+        bot_name = os.environ['bot_name']
+        print('New message: %s' % msg_full)
+        send_msg(logger,msg_full)
+        save_to_table(logger,msg_hash)
+    else:
+        print('Error message: %s' % msg_full)
+        print('We\'ve already sent a message about that lambda. Don\'t do anything')
+
+
 def msg_already_sent(logger,msg):
     table_name = os.environ['error_table']
     timestamp = stack_timestamp()

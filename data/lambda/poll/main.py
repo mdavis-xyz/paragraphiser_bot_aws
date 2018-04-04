@@ -5,18 +5,18 @@ from boto3.dynamodb.conditions import Key, Attr
 import time
 import json
 import common
+import errors
 
-
-def lambda_handler(event,contex):
+def lambda_handler(event,context):
     if ('unitTest' in event) and event['unitTest']:
         print('Running unit tests')
         #common.unit_tests()
-        check_latest_batch(dry_run=True)
+        check_latest_batch(event,context,dry_run=True)
     else:
         print('Running main (non-test) handler')
-        return(check_latest_batch())
+        return(errors.capture_err(check_latest_batch,event,context))
 
-def check_latest_batch(dry_run=False):
+def check_latest_batch(event,context,dry_run=False):
     post_ids = fetch_next(dry_run=dry_run)
 
     if len(post_ids) == 0:

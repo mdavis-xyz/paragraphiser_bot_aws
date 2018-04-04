@@ -6,6 +6,7 @@ from boto3.dynamodb.conditions import Key, Attr
 import time
 import json
 import common
+import errors
 
 SEC_PER_MIN = 60
 MIN_PER_H = 60
@@ -20,19 +21,20 @@ SEC_PER_YEAR = SEC_PER_DAY * DAYS_PER_YEAR
 
 
 
-def lambda_handler(event,contex):
+def lambda_handler(event,context):
     if ('unitTest' in event) and event['unitTest']:
         print('Running unit tests')
         common.unit_tests()
-        look_for_new(dry_run=True)
+        look_for_new(event,context,dry_run=True)
         test_eligibility()
     elif os.environ['enable'] not in [True,'true','True','TRUE',1]:
         print('Function disabled')
     else:
         print('Running main (non-test) handler')
-        return(look_for_new())
+        return(errors.capture_err(look_for_new,event,context))
 
-def look_for_new(dry_run=False):
+
+def look_for_new(event,context,dry_run=False):
     print('Looking for new posts')
 
     reddit = praw.Reddit('bot1')

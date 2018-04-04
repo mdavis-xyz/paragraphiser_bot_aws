@@ -22,10 +22,13 @@ virtualenv -p /usr/bin/python3.6 ./env
 pip install boto3
 # pip install praw
 
-# rm -rf include
-# mkdir include
+rm -rf include
+mkdir include
 # cp $1/credentials/praw.ini include/praw.ini
-# cp $1/util/common.py include/common.py
+for DEP in errors.py
+do
+    cp $1/util/$DEP include/$DEP 
+done
 # cp $1/util/scheduling.py include/scheduling.py
 
 deactivate

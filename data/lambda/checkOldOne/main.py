@@ -7,8 +7,9 @@ import time
 import json
 import common
 import re
+import errors
 
-def lambda_handler(event,contex):
+def lambda_handler(event,context):
     if ('unitTest' in event) and event['unitTest']:
         print('Running unit tests')
         test_regex()
@@ -16,9 +17,9 @@ def lambda_handler(event,contex):
         print('Function disabled')
     else:
         print('Running main (non-test) handler')
-        return(check_old(event))
+        return(errors.capture_err(check_old,event,context))
 
-def check_old(event):
+def check_old(event,context):
     try:
         post_id = event['post_id']
     except Exception as e:

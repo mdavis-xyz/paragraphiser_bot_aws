@@ -5,21 +5,21 @@ from boto3.dynamodb.conditions import Key, Attr
 import time
 import json
 import common
+import errors
 
-
-def lambda_handler(event,contex):
+def lambda_handler(event,context):
     print('Warning: this function doesnt work as lambda. It takes to long')
     print('TODO: rewrite this to paginate dynamodb calls, then invoke itself')
     if ('unitTest' in event) and event['unitTest']:
         print('Running unit tests')
         #common.unit_tests()
-        #recheck_all(dry_run=True)
+        recheck_all(event,context,dry_run=True)
     else:
         print('Running main (non-test) handler')
         assert(NotImplementedError)
-        return(recheck_all(dry_run=False))
+        return(recheck_all(event,context))
 
-def recheck_all(dry_run=False):
+def recheck_all(event,context,dry_run=False):
     post_ids = fetch_all()
 
     print('There are %d posts to recheck' % len(post_ids))
@@ -34,7 +34,8 @@ def recheck_all(dry_run=False):
         delay += 0.5 # check 2 posts per minute, to avoid api congestion
         # dynamo limit is 5 per second for this table
         # Halving that frequency, just to be sure
-        time.sleep(2/5) # python 3 does this as a float
+        if not dry_run:
+            time.sleep(2/5) # python 3 does this as a float
 
     print('done')
 
@@ -110,6 +111,6 @@ if __name__ == '__main__':
     os.environ['post_history_table'] = 'paragraphiser-stack-postHistoryTable-132NV22648DXY'
     os.environ['schedule_table'] = 'paragraphiser-stack-scheduleTable-D4P9THUEJJBT'
 
-    recheck_all()
+    recheck_all(None,None)
 
     print('done')

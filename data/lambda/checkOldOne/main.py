@@ -8,6 +8,7 @@ import json
 import common
 import re
 import errors
+import prawcore
 
 def lambda_handler(event,context):
     if ('unitTest' in event) and event['unitTest']:
@@ -62,7 +63,12 @@ def check_old(event,context):
 
         # now check votes
         print('Checking score')
-        net_score = get_net_score(comment)
+        try:
+            net_score = get_net_score(comment)
+        except prawcore.exceptions.ServerError:
+            print('ERROR: something went wrong, sleeping for 10 seconds then trying again')
+            time.sleep(10)
+            net_score = get_net_score(comment)
 
         if net_score < 0:
             print('Comment %s has negative reaction' % comment.id)

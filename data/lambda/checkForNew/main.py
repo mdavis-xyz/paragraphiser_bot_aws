@@ -1,4 +1,5 @@
 import praw
+import prawcore
 import os
 import pprint as pp
 import boto3
@@ -51,7 +52,13 @@ def check_subreddit(sub_name,dry_run=False):
 
     reddit = praw.Reddit('bot1')
     subreddit = reddit.subreddit(sub_name)
-    submissions = [s for s in subreddit.hot(limit=limit)]
+    try:
+        submissions = [s for s in subreddit.hot(limit=limit)]
+    except prawcore.exceptions.ResponseException:
+        print('Error: something went wrong, sleeping for 10 seconds then trying again')
+        time.sleep(10)
+        submissions = [s for s in subreddit.hot(limit=limit)]
+
 
     print('Looking at the hottest %d posts' % limit)
 

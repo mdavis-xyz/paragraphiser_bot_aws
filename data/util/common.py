@@ -133,7 +133,7 @@ def update_reply(submission,comment,data):
         pp.pprint(debug_lengths(submission.selftext))
         print('Post %s is still eligible for comment, no change' % submission.id)
         return(None)
-    elif submission.selftext == '[removed]':
+    elif submission.selftext.lower() in ['[removed]','[deleted]']:
         print('Submission %s was deleted, don\'t update comment')
         return(None)
     else:

@@ -94,6 +94,9 @@ def update_reply(submission,comment,data):
     if 'potato' in submission.selftext:
         print('Post %s is still eligible for comment' % submission.id)
         return(None)
+    elif submission.selftext.lower() in ['[removed]','[deleted]']:
+        print('Submission %s was deleted, don\'t update comment')
+        return(None)
     else:
         reply_template_fname = './replyTemplateUpdate.mako'
         cur_num_potatos = count_word_occurance('potato',submission.selftext)

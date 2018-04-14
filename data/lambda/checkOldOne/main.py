@@ -182,7 +182,7 @@ def send_alert(comment,net_score):
     comment_url = 'reddit.com' + comment.permalink
     bot_name = os.environ['bot_name']
     msg = 'Warning: Your %s bot posted comment %s which has been voted into negative territory.' % (bot_name,comment.id)
-    msg += '\n\n' + comment_url
+    msg += '\n\nhttps://' + comment_url
 
     topic = os.environ['filtered_error_topic']
 

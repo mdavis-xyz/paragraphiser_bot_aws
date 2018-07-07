@@ -26,9 +26,9 @@ pip install mako # dependency of common
 rm -rf include
 mkdir include
 cp $1/credentials/praw.ini include/praw.ini
-for DEP in common.py errors.py replyTemplateNew.mako
+for DEP in common.py errors.py replyTemplateNew.mako example-big-02.md example-big-01.md example-small-01.md
 do
-    cp $1/util/$DEP include/$DEP 
+    cp $1/util/$DEP include/$DEP
 done
 deactivate
 

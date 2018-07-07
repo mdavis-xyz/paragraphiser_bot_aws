@@ -21,6 +21,7 @@ def unit_tests():
     test_count_words()
     test_split()
     test_mako()
+    test_lists()
     return()
 
 
@@ -44,10 +45,37 @@ def test_split():
     assert(expected == actual)
     print('paragraph splitter passed')
 
+# check the paragraph splitter is aware of markdown lists
+def test_lists():
+    test_list('example-small-01.md',False,2300)
+    test_list('example-big-01.md',True,2300)
+    test_list('example-big-02.md',True,2300) 
+
+def test_list(fname,eligible,length):
+    with open(fname,'r') as f:
+        body = f.read()
+    print('testing %s' % fname)
+    pp.pprint(debug_lengths(body))
+
+    max_par = max_paragraph_size(body)
+    print('\nmax paragraph size: %d' % max_par)
+
+    if eligible:
+        assert(max_paragraph_size(body) >= length )
+    else:
+        assert(max_paragraph_size(body) < length)
+    
+
 # takes in a string
 # returns an array of strings
 # In markdown, a single new line character does not create a new paragraph
 def split_by_paragraph(text):
+
+    # a list should count as a new paragraph
+    # but they're typically just one new line
+    # so separate items with an extra newline character
+    text = re.compile(r"^\s*([\*\-\+]|(\d+\.))\s+", re.MULTILINE).sub('\n\n\1',text)
+
     # regex because some people write '\n \n' when making a new paragraph
     # or maybe that's dynamodb playing tricks on me
     paragraphs = re.split('\n\s*\n',text)
@@ -196,3 +224,7 @@ def test_count_words():
     assert(expected == actual)
     print('count_words() test passed')
 
+if __name__ == '__main__':
+    print('common.py invoked standalone, running unit tests')
+    unit_tests()
+    print('all unit tests passed')

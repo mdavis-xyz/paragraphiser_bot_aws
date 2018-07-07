@@ -22,7 +22,7 @@ def lambda_handler(event,context):
         logger.info('Running main (non-test) handler')
         return(errors.capture_err(get_stats,event,context))
 
-def get_stats(event,context,dry_run=False):
+def get_stats(dry_run=False):
 
     client = boto3.client('dynamodb')
 
@@ -73,9 +73,18 @@ def num_updated():
         FilterExpression=cond,
     )
 
-    assert('LastEvaluatedKey' not in response)
+    count = response['Count']
 
-    return(response['Count'])
+    while ( 'LastEvaluatedKey' in response):
+       response = table.scan(
+          Select='COUNT',
+          FilterExpression=cond,
+          ExclusiveStartKey=response['LastEvaluatedKey']
+       )
+       count += response['Count']
+
+
+    return(count)
 
 if __name__ == '__main__':
     print('triggered __main__')

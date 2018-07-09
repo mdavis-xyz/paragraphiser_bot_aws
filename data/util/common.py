@@ -117,15 +117,22 @@ def generate_reply(submission,debug=False):
     else:
         print([c for c in submission.selftext[100:130]])
         max_size = max_paragraph_size(submission.selftext)
+        num_paragraphs = len(split_by_paragraph(submission.selftext))
         if max_size < size_limit:
             #print('Submission %s is not eligible for reply because it is too short' % submission.id)
             return(None)
         print('Max size in post %s: %d chars size_limit %d' % (submission.id,max_size,size_limit))
 
-        # using mako library to pass data into the template
-        reply_template_fname = './replyTemplateNew.mako'
-        with open(reply_template_fname,'r') as f:
-            reply_msg = Template(f.read()).render()
+        if num_paragraphs < 4:
+            # using mako library to pass data into the template
+            reply_template_fname = './replyTemplateNew.mako'
+            with open(reply_template_fname,'r') as f:
+                reply_msg = Template(f.read()).render()
+        else:
+            # using mako library to pass data into the template
+            reply_template_fname = './replyTemplateNewSplit.mako'
+            with open(reply_template_fname,'r') as f:
+                reply_msg = Template(f.read()).render(max_length=max_size)
 
         ret = {
             'original_reply':reply_msg,

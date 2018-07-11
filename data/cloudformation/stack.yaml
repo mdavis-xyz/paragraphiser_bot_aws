@@ -172,7 +172,7 @@ Resources:
                 "Fn::GetAtt": ["ExecutionRole", "Arn"]
             Environment:
                 Variables:
-                   num_to_scan: 30
+                   num_to_scan: 20
                    schedule_table:
                        Ref: "scheduleTable"
                    post_history_table:

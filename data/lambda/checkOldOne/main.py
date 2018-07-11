@@ -1,4 +1,5 @@
 import praw
+import prawcore
 import os
 import pprint as pp
 import boto3
@@ -48,8 +49,13 @@ def check_old(event,context):
         prev_comment = data['updated_reply']
     else:
         prev_comment = data['original_reply']
-        
-    ret = common.update_reply(submission,comment,data)
+    
+    try: 
+       ret = common.update_reply(submission,comment,data)
+    except prawcore.exceptions.ResponseException:
+       print("Error: problem sending reply update to reddit, sleeping then trying again")
+       time.sleep(60)
+       return(check_old(event,context))
 
     if (ret != None) and (ret['updated_reply'] != prev_comment):
         print('Updating comment %s for post %s' % (comment_id,post_id))

@@ -48,16 +48,20 @@ def look_for_new(event,context,dry_run=False):
 def check_subreddit(sub_name,dry_run=False):
 
     skipped_posts = 0
-    limit = int(os.getenv('num_to_scan',50))
+    limit = int(os.getenv('num_to_scan',20))
 
     reddit = praw.Reddit('bot1')
     subreddit = reddit.subreddit(sub_name)
     try:
         submissions = [s for s in subreddit.hot(limit=limit)]
     except prawcore.exceptions.ResponseException:
-        print('Error: something went wrong, sleeping for 10 seconds then trying again')
+        print('Error: something went wrong, sleeping for 10 seconds then trying again, slower')
         time.sleep(10)
-        submissions = [s for s in subreddit.hot(limit=limit)]
+        subreddit = reddit.subreddit(sub_name)
+        submissions = []
+        for s in subreddit.hot(limit=limit):
+            submissions.append(s)
+            sleep(1)
 
 
     print('Looking at the hottest %d posts' % limit)
@@ -122,7 +126,8 @@ def reply_and_save(reply,submission,dry_run):
             except praw.exceptions.APIException as e:
                 if 'ratelimit' in e.message.lower():
                     print('Hmm, I\'m being rate limited. Waiting 60 seconds')
-                    time.sleep(60)
+                    time.sleep(80)
+                    
                     print('Waking up, trying again')
                     submission.reply(reply['original_reply'])
             comment_id = comment.id

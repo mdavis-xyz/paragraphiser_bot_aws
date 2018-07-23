@@ -5,10 +5,10 @@
 set -e # exit if a single command fails
 
 # check number of arguments
-if [ "$#" -ne 1 ] || ! [ -d "$1" ]; then
-  echo "Usage: $0 libdir" >&2
-  exit 1
-fi
+#if [ "$#" -ne 1 ] || ! [ -d "$1" ]; then
+#  echo "Usage: $0 libdir" >&2
+#  exit 1
+#fi
 
 # if ! [[ -z "$VIRTUAL_ENV" ]]; then
 #     echo "VIRTUAL_ENV is set"

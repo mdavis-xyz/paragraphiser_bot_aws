@@ -104,7 +104,12 @@ def load_post_info(post_id):
         },
         ConsistentRead=False, # cheaper
     )
-    assert(post_id == response['Item']['post_id']['S'])
+    try:
+        assert(post_id == response['Item']['post_id']['S'])
+    except KeyError as e:
+        pp.pprint(response)
+        print("Error: can't get post ID")
+        raise(e)
 
     data = json.loads(response['Item']['data']['S'])
 

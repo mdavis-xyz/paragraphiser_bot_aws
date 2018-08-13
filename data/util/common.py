@@ -112,25 +112,27 @@ def max_paragraph_size(text):
 def generate_reply(submission,debug=False):
     print('generate_reply called on post %s' % submission.id)
     if (not submission.is_self):
-        #print('Submission %s is not eligible for reply because it is not a self post' % submission.id)
+        print('Submission %s is not eligible for reply because it is not a self post' % submission.id)
         return(None)
     else:
         print([c for c in submission.selftext[100:130]])
         max_size = max_paragraph_size(submission.selftext)
         num_paragraphs = len(split_by_paragraph(submission.selftext))
         if max_size < size_limit:
-            #print('Submission %s is not eligible for reply because it is too short' % submission.id)
+            print('Submission %s is not eligible for reply because it is too short' % submission.id)
             return(None)
         print('Max size in post %s: %d chars size_limit %d' % (submission.id,max_size,size_limit))
-
+        print('Submission %s is eligible for reply because it is long' % submission.id)
         if num_paragraphs < 4:
             # using mako library to pass data into the template
             reply_template_fname = './replyTemplateNew.mako'
+            print('using %s to generate reply for %s' % (reply_template_fname, submission.id))
             with open(reply_template_fname,'r') as f:
                 reply_msg = Template(f.read()).render()
         else:
             # using mako library to pass data into the template
             reply_template_fname = './replyTemplateNewSplit.mako'
+            print('using %s to generate reply for %s' % (reply_template_fname, submission.id))
             with open(reply_template_fname,'r') as f:
                 reply_msg = Template(f.read()).render(max_length=max_size)
 
@@ -138,7 +140,7 @@ def generate_reply(submission,debug=False):
             'original_reply':reply_msg,
             'original_post':submission.selftext
         }
-
+        print('generate_reply returning: %s' % str(ret))
         return(ret)
 
 # for posts we've seen and commented on before

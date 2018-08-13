@@ -96,7 +96,7 @@ def check_subreddit(sub_name,dry_run=False):
             if dry_run:
                 print('I would reply to the following posts:')
             else:
-                print('About to reply to the following posts:')
+                print('About to reply to the following %d posts:' % len(submissions))
             print('\n   '+ '\n   '.join([s.id for s in submissions]))
 
             comment_ids = []

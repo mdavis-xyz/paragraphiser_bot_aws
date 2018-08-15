@@ -61,7 +61,7 @@ def check_subreddit(sub_name,dry_run=False):
         submissions = []
         for s in subreddit.hot(limit=limit):
             submissions.append(s)
-            sleep(1)
+            time.sleep(1)
 
 
     print('Looking at the hottest %d posts' % limit)

@@ -30,7 +30,7 @@ def test_mako():
     print('Checking that mako works')
     reply_template_fname = './replyTemplateNew.mako'
     with open(reply_template_fname,'r') as f:
-        reply_msg = Template(f.read()).render(num_potatos=1)
+        reply_msg = Template(f.read()).render(multiple=True)
 
 def test_split():
     print('testing paragraph splitter')
@@ -126,9 +126,10 @@ def generate_reply(submission,debug=False):
         if num_paragraphs < 4:
             # using mako library to pass data into the template
             reply_template_fname = './replyTemplateNew.mako'
+            multiple = (num_paragraphs == 1) and ('\n' in submission.selftext.strip())
             print('using %s to generate reply for %s' % (reply_template_fname, submission.id))
             with open(reply_template_fname,'r') as f:
-                reply_msg = Template(f.read()).render()
+                reply_msg = Template(f.read()).render(multiple=multiple)
         else:
             # using mako library to pass data into the template
             reply_template_fname = './replyTemplateNewSplit.mako'

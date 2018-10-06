@@ -123,7 +123,7 @@ def generate_reply(submission,debug=False):
             return(None)
         print('Max size in post %s: %d chars size_limit %d' % (submission.id,max_size,size_limit))
         print('Submission %s is eligible for reply because it is long' % submission.id)
-        if num_paragraphs < 4:
+        if num_paragraphs < 3:
             # using mako library to pass data into the template
             reply_template_fname = './replyTemplateNew.mako'
             multiple = (num_paragraphs == 1) and ('\n' in submission.selftext.strip())

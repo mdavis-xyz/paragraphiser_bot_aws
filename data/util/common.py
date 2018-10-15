@@ -22,6 +22,7 @@ def unit_tests():
     test_split()
     test_mako()
     test_lists()
+    test_split_by_paragraph()
     return()
 
 
@@ -64,7 +65,14 @@ def test_list(fname,eligible,length):
         assert(max_paragraph_size(body) >= length )
     else:
         assert(max_paragraph_size(body) < length)
-    
+   
+def test_split_by_paragraph():
+    with open("example-special.md","r") as f:
+        text = f.read()
+
+    paragraphs = split_by_paragraph(text)
+
+    assert(len(paragraphs) == 5)
 
 # takes in a string
 # returns an array of strings
@@ -82,6 +90,11 @@ def split_by_paragraph(text):
 
     ## in case there are triple \n
     paragraphs = [p.strip('\n') for p in paragraphs]
+
+    # with the reddit redesign, this appears when users enter multiple empty lines
+    # in the non-markdown editor
+    specialChar = "&#x200B;"
+    paragraphs = [p for p in paragraphs if p != specialChar]
 
     ## remove any 'paragraphs' which are empty or only whitespace
     all_white = lambda s: all([c in string.whitespace for c in s]) # True if empty

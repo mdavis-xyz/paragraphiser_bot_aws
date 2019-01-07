@@ -1,0 +1,4 @@
+virtualenv
+boto3
+praw
+mako

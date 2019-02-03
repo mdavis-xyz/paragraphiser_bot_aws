@@ -147,8 +147,9 @@ def generate_reply(submission,debug=False):
             # using mako library to pass data into the template
             reply_template_fname = './replyTemplateNewSplit.mako'
             print('using %s to generate reply for %s' % (reply_template_fname, submission.id))
+            max_words = count_words_max(submission.selftext)
             with open(reply_template_fname,'r') as f:
-                reply_msg = Template(f.read()).render(max_length=max_size)
+                reply_msg = Template(f.read()).render(max_words=max_words)
 
         ret = {
             'original_reply':reply_msg,

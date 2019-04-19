@@ -23,7 +23,45 @@ def unit_tests():
     test_mako()
     test_lists()
     test_split_by_paragraph()
+    testKeywordFilter()
     return()
+
+# returns True if sensitive topics included
+def keywordFilter(text):
+    keywords = [
+       'rape','assault','suicide'
+    ]
+
+    words = [w.lower().rstrip('.!?;,') for w in text.replace('\n',' ').split(' ') if w.strip() != '']
+
+    if any([w in words for w in keywords]):
+        return(True)
+
+    for person in ['myself','himself','herself']:
+        for verb in ['kill','killed','hang','hanged']:
+           expression = '%s %s' % (verb,person)
+           if expression in text.lower():
+               return(True)
+    return(False)
+
+def testKeywordFilter():
+    good = [
+        'Hello how are you',
+        'I eat grapes', # rape plus an extra letter
+        'I killed that exam'
+    ]
+
+    assert(not any([keywordFilter(expr) for expr in good]))
+
+    # If people are asking stuff like this they shouldn't be hassled by my bot
+    bad = [
+        'I was raped by someone',
+        'He killed himself', 
+        'Something about suicide.', # punctuation at end
+    ]
+
+    assert(all([keywordFilter(expr) for expr in bad]))
+
 
 
 def test_mako():
@@ -126,6 +164,9 @@ def generate_reply(submission,debug=False):
     print('generate_reply called on post %s' % submission.id)
     if (not submission.is_self):
         print('Submission %s is not eligible for reply because it is not a self post' % submission.id)
+        return(None)
+    if keywordFilter(submission.selftext) or keywordFilter(submission.title):
+        print("Ignoring submission %s because of the keyword filter" % submission.id)
         return(None)
     else:
         print([c for c in submission.selftext[100:130]])

@@ -284,19 +284,34 @@ class Lam(object):
 
         key = self.s3_key(name)
 
-        client = boto3.client('s3')
+        s3 = boto3.resource('s3')
+        obj = s3.Object(self.code_bucket,key)
 
         with open(zip_fname,"rb") as zip_f:
             print('   about to upload zip of %s to S3' % name)
-            response = client.put_object(
+            response = obj.put(
                 ACL='bucket-owner-full-control',
-                Body=zip_f.read(),
-                Bucket=self.code_bucket,
-                Key=key
+                Body=zip_f.read()
             )
             print('   uploaded zip of %s to S3' % name)
+            obj.reload()
 
-            version = response['VersionId']
+            if 'VersionId' in response:
+                version = response['VersionId']
+            elif obj.version_id:
+                version = obj.version_id
+            else:
+                print(warn("Failed to get version id of %s zip S3 obj" % name))
+                etag = response['ETag']
+
+                obj = s3.Object(self.code_bucket, key)
+                obj.load()
+                assert(obj.e_tag == etag)
+                assert(obj.version_id)
+                version = obj.version_id
+
+            assert(version)
+            assert(type(version) == type(''))
 
         ret = {'Success':True,'msg':'Uploaded sucessfully','return_val':version}
 

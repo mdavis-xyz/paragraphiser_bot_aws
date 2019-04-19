@@ -24,7 +24,7 @@ pip install -r requirements.txt
 rm -rf include
 mkdir include
 cp $1/credentials/praw.ini include/praw.ini
-for DEP in common.py errors.py 
+for DEP in common.py errors.py  template.md templateTest.md
 do
     cp $1/util/$DEP include/$DEP
 done

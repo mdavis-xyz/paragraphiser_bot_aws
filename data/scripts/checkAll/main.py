@@ -108,8 +108,8 @@ def fetch_all():
 if __name__ == '__main__':
     print('Triggered __main__')
 
-    os.environ['post_history_table'] = 'paragraphiser-stack-postHistoryTable-132NV22648DXY'
-    os.environ['schedule_table'] = 'paragraphiser-stack-scheduleTable-D4P9THUEJJBT'
+    os.environ['post_history_table'] =
+    os.environ['schedule_table'] = 
 
     recheck_all(None,None)
 

@@ -17,7 +17,8 @@ def arguments(argv):
     parser.add_argument('-s', '--stage-name',
                            help="Name of the stage (e.g. prod, dev)",
                            type=str,
-                           required=True
+                           required=False,
+                           default='prod'
                            )
     parser.add_argument('-b', '--skip-build',
                        help="Do not rebuild lambda environments",

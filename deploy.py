@@ -71,7 +71,7 @@ def main(argv):
     lib_dir = os.path.join(root_dir,'data','lib')
     cloudformation_dir = os.path.join(root_dir,'data','cloudformation')
     data_dir = os.path.join(root_dir,'data')
-    project_name = 'paragraphiser'
+    project_name = 'reddit-amp-bot'
     code_bucket = '%s-code' % project_name
     region = 'ap-southeast-2'
 

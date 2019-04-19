@@ -1,0 +1,4 @@
+boto3
+praw
+certifi
+beautifulsoup4

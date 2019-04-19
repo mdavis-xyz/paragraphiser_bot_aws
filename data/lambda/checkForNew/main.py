@@ -27,7 +27,6 @@ def lambda_handler(event,context):
         print('Running unit tests')
         common.unit_tests()
         look_for_new(event,context,dry_run=True)
-        test_eligibility()
     elif os.environ['enable'] not in [True,'true','True','TRUE',1]:
         print('Function disabled')
     else:
@@ -202,16 +201,13 @@ def keys_exist(ids):
 def schedule_checks(post_id,dry_run):
 
      # minutes
-    delays = [x for x in range(int(2*MIN_PER_H))] + \
-             [x for x in range(int(2*MIN_PER_H)+1,int(4*MIN_PER_H),2)] +  \
-             [x for x in range(int(4*MIN_PER_H)+1,int(8*MIN_PER_H),10)] +  \
-             [x for x in range(int(8*MIN_PER_H)+1,int(12*MIN_PER_H),30)] +  \
-             [x for x in range(int(12*MIN_PER_H)+1,int(MIN_PER_DAY),MIN_PER_H)] +  \
-             [x for x in range(int(MIN_PER_DAY)+1,int(2*MIN_PER_DAY),2*MIN_PER_H)] +  \
-             [x for x in range(int(2*MIN_PER_DAY)+1,int(4*MIN_PER_DAY),4*MIN_PER_H)] +  \
-             [x for x in range(int(4*MIN_PER_DAY)+1,int(10*MIN_PER_DAY),MIN_PER_H)] +  \
-             [x for x in range(int(10*MIN_PER_DAY)+1,int(100*MIN_PER_DAY),5*MIN_PER_DAY)] + \
-             [x for x in range(int(100*MIN_PER_DAY)+1,int(2*MIN_PER_YEAR),30*MIN_PER_DAY)]
+    delays = [
+            MIN_PER_H,
+            MIN_PER_DAY,
+            7*MIN_PER_DAY,
+            30*MIN_PER_DAY,
+            MIN_PER_YEAR
+            ]
 
     delays = [int(x) for x in delays] # rounding
 
@@ -245,27 +241,3 @@ def schedule_checks(post_id,dry_run):
             time.sleep(2/5) # python 3 does this as a float
 
     print('Finished scheduling messages for later for post %s' % post_id)
-
-def test_eligibility():
-    print('Initialising praw for eligibility test')
-    reddit = praw.Reddit('bot1')
-
-    inputs = [
-        ('7yy0lr',False), # long post but many short paragraphs
-        ('7yw9a',False),  # long post but many short paragraphs
-        ('7z2r10',False), # long post but many short paragraphs
-        ('7z3bs2',False), # long post but many short paragraphs
-        ('7z3c0f',False), # long post but many short paragraphs
-        ('75jp3p',True)   # long post, one long paragraph
-    ]
-    for (post_id,eligible) in inputs:
-        print('Getting submission %s' % post_id)
-        submission = reddit.submission(id=post_id)
-        ret = common.generate_reply(submission,debug=True)
-        if eligible:
-            assert(ret != None)
-            assert('original_reply' in ret)
-        else:
-            assert(ret == None)
-
-    print('Finished running eligibility tests')

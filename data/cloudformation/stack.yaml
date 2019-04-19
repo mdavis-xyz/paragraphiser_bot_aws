@@ -180,7 +180,7 @@ Resources:
                    bot_name:
                        Ref: "botname"
                    subreddits:
-                       "relationship_advice,bottest" # comma separated
+                       "bottest" # comma separated
                    enable:
                        TRUE
                    errorHandlerArn:

@@ -7,113 +7,25 @@ import time
 from mako.template import Template
 import string
 import re
+import certifi
+import urllib3
+from bs4 import BeautifulSoup as bs
+
+
+otherAMPBot = 'AntiGoogleAmpBot'
 
 # Apparently you can't have a dynamo table with just a
 # sort key. So I'll add an arbitrary hash key to the delay table, which will only have
 # one value
 hash_key_val = 'data'
 
-# bot replies for posts with at least this many characters without a new line
-size_limit = 2300
 
 # to be called by checkForNew
 def unit_tests():
-    test_count_words()
-    test_split()
-    test_mako()
-    test_lists()
-    test_split_by_paragraph()
+    testAll()
+    testGetReplyDict()
     return()
 
-
-def test_mako():
-    # using mako library to pass data into the template
-    print('Checking that mako works')
-    reply_template_fname = './replyTemplateNew.mako'
-    with open(reply_template_fname,'r') as f:
-        reply_msg = Template(f.read()).render(multiple=True)
-
-def test_split():
-    print('testing paragraph splitter')
-    input = 'first\n \nsecond para\n\n\nthird para\nstill third'
-    expected = ['first','second para','third para\nstill third']
-    actual = split_by_paragraph(input)
-    if expected != actual:
-        print('Error: test failed')
-        print('input: %s' % input)
-        print('expected: %s' % expected)
-        print('actual: %s' % actual)
-    assert(expected == actual)
-    print('paragraph splitter passed')
-
-# check the paragraph splitter is aware of markdown lists
-def test_lists():
-    test_list('example-small-01.md',False,2300)
-    test_list('example-big-01.md',True,2300)
-    test_list('example-big-02.md',True,2300) 
-
-def test_list(fname,eligible,length):
-    with open(fname,'r') as f:
-        body = f.read()
-    print('testing %s' % fname)
-    pp.pprint(debug_lengths(body))
-
-    max_par = max_paragraph_size(body)
-    print('\nmax paragraph size: %d' % max_par)
-
-    if eligible:
-        assert(max_paragraph_size(body) >= length )
-    else:
-        assert(max_paragraph_size(body) < length)
-   
-def test_split_by_paragraph():
-    with open("example-special.md","r") as f:
-        text = f.read()
-
-    paragraphs = split_by_paragraph(text)
-
-    assert(len(paragraphs) == 5)
-
-# takes in a string
-# returns an array of strings
-# In markdown, a single new line character does not create a new paragraph
-def split_by_paragraph(text):
-
-    # a list should count as a new paragraph
-    # but they're typically just one new line
-    # so separate items with an extra newline character
-    text = re.compile(r"^\s*([\*\-\+]|(\d+\.))\s+", re.MULTILINE).sub('\n\n\1',text)
-
-    # regex because some people write '\n \n' when making a new paragraph
-    # or maybe that's dynamodb playing tricks on me
-    paragraphs = re.split('\n\s*\n',text)
-
-    ## in case there are triple \n
-    paragraphs = [p.strip('\n') for p in paragraphs]
-
-    # with the reddit redesign, this appears when users enter multiple empty lines
-    # in the non-markdown editor
-    specialChar = "&#x200B;"
-    paragraphs = [p for p in paragraphs if p != specialChar]
-
-    ## remove any 'paragraphs' which are empty or only whitespace
-    all_white = lambda s: all([c in string.whitespace for c in s]) # True if empty
-    paragraphs = [p for p in paragraphs if (not all_white(p)) or (p == '')]
-
-    return(paragraphs)
-    
-def debug_lengths(text):
-    paragraphs = split_by_paragraph(text)
-
-    data = [{'start':p[0:10],'length':len(p),'words':count_words(p)} for p in paragraphs]
-
-    return(data)
-
-def max_paragraph_size(text):
-    paragraphs = split_by_paragraph(text)
-
-    largest_para = max([len(p) for p in paragraphs])
-    return(largest_para)
 
 # for posts we have not seen before if you want to ignore this post, return None
 # if you want to comment on this post, return
@@ -124,39 +36,77 @@ def max_paragraph_size(text):
 # check how your comment is doing
 def generate_reply(submission,debug=False):
     print('generate_reply called on post %s' % submission.id)
-    if (not submission.is_self):
-        print('Submission %s is not eligible for reply because it is not a self post' % submission.id)
-        return(None)
-    else:
-        print([c for c in submission.selftext[100:130]])
-        max_size = max_paragraph_size(submission.selftext)
-        num_paragraphs = len(split_by_paragraph(submission.selftext))
-        if max_size < size_limit:
-            print('Submission %s is not eligible for reply because it is too short' % submission.id)
-            return(None)
-        print('Max size in post %s: %d chars size_limit %d' % (submission.id,max_size,size_limit))
-        print('Submission %s is eligible for reply because it is long' % submission.id)
-        if num_paragraphs < 3:
-            # using mako library to pass data into the template
-            reply_template_fname = './replyTemplateNew.mako'
-            multiple = (num_paragraphs == 1) and ('\n' in submission.selftext.strip())
-            print('using %s to generate reply for %s' % (reply_template_fname, submission.id))
-            with open(reply_template_fname,'r') as f:
-                reply_msg = Template(f.read()).render(multiple=multiple)
-        else:
-            # using mako library to pass data into the template
-            reply_template_fname = './replyTemplateNewSplit.mako'
-            print('using %s to generate reply for %s' % (reply_template_fname, submission.id))
-            max_words = count_words_max(submission.selftext)
-            with open(reply_template_fname,'r') as f:
-                reply_msg = Template(f.read()).render(max_words=max_words)
 
-        ret = {
-            'original_reply':reply_msg,
-            'original_post':submission.selftext
-        }
-        print('generate_reply returning: %s' % str(ret))
-        return(ret)
+
+    if submission.is_self:
+        newURL = convertURL(submission.selftext)
+        if newURL and (newURL not in selftext):
+            print("Submission %s selftext contains URL, new one is: %s" % (submission.id,newURL))
+            reply = getReplyDict(newURL) 
+            if otherAMPBot(submission): 
+                print("Other AMP bot has already replied to %s, returning None" % submission.id)
+                return(None)
+            return(reply)
+        else:
+            print("Submission %s did not contain any AMP links" % submission.id)
+            return(None)
+
+    else: # link post
+        newURL = convertURL(submission.url)
+        if newURL and (newURL not in selftext):
+            print("Submission %s links to AMP link %s which corresponds to: %s" % (submission.id,submission.url,newURL))
+            reply = getReplyDict(newURL)
+            if otherAMPBot(submission):
+                print("Other AMP bot has already replied to %s, returning None" % submission.id)
+                return(None)
+            return(reply)
+        else:
+            print("Submission %s did not link to an AMP link, url was %s" % (submission.id,submission.url))
+            return(None)
+
+# returns true if that other AMP bot has replied
+def otherAMPBot(submission):
+    submission.comments.replace_more(limit=None)
+    for comment in submission.comments:
+        if comment.author.id == otherAMPBot:
+            return(True)
+    return(False)
+
+
+def testOtherAMPBot():
+    reddit = praw.Reddit('bot1')
+
+    # I don't have any positive tests
+    # since I don't think that bot actually replies to posts, only to comments
+    tests = [
+       (False,"https://www.reddit.com/r/worldnews/comments/besihy/mueller_identified_dozens_of_us_rallies_organized/")
+    ]
+    for (expected,postURL) in tests:
+        submission = reddit.submission(url=postURL)
+        assert(expected == otherAMPBot(submission))
+
+
+# outside function, to cache between lambda invocations
+with open('template.md','r') as f:
+    template = Template(f.read())
+
+# takes in a canonical URL,
+# returns a dict with {'original_reply':text}
+def getReplyDict(url):
+    text = template.render(url=url)
+    return({'original_reply':text})
+
+def testGetReplyDict():
+    url = "https://www.example.com/test"
+
+    with open('templateTest.md','r') as f:
+        text = f.read()
+
+    expected = {'original_reply':text}
+
+    actual = getReplyDict(url)
+
+    assert(expected == actual)
 
 # for posts we've seen and commented on before
 # submission is the current state of the post
@@ -168,85 +118,154 @@ def generate_reply(submission,debug=False):
 # that return dict can contain other entries, which will be saved and returned next time we check
 # if it contains keys returned before, this latest version's values will be updated
 def update_reply(submission,comment,data):
-    assert(submission.is_self)
+    return(None) # never update a comment
 
-    # praw is wierd at times
-    x = submission.selftext
-    y = submission.selftext
-    z = submission.selftext
-    assert(x == y == z)
-    assert(type(x) == type(''))
 
-    max_size = max_paragraph_size(submission.selftext)
-
-    if max_size >= size_limit:
-        print('largest paragraph is %d characters' % max_size)
-        print('Debug lengths:')
-        pp.pprint(debug_lengths(submission.selftext))
-        print('Post %s is still eligible for comment, no change' % submission.id)
-        return(None)
-    elif submission.selftext.lower() in ['[removed]','[deleted]']:
-        print('Submission %s was deleted, don\'t update comment')
-        return(None)
+# initialise outside a function, to cache between lambda invocations
+http = urllib3.PoolManager(cert_reqs='CERT_REQUIRED',ca_certs=certifi.where())
+def downloadWebPage(url):
+    r = http.request('GET',url)
+    if r.status == 200:
+        print("Hit: " + url)
+        html = r.data.decode('utf-8')
+        #soup = bs(html, 'html.parser')
+        return({'html':html,'status':r.status})
     else:
-        prev_words = count_words_max(data['original_post'])
-        cur_words = count_words_max(submission.selftext)
+        print("Error %d fetching page %s" % (r.status, url))
+        return({'status':r.status})
 
-        reply_template_fname = './replyTemplateUpdate.mako'
 
-        with open(reply_template_fname,'r') as f:
-            reply_msg = Template(f.read()).render(
-                cur_max=cur_words,
-                prev_max=prev_words
-            )
+def testRegex():
+    pattern = r"(\d+)\s\d+"
+    replace = r"!\1"
+    original = "test123 456 test"
+    expected = "test!123 test"
+    regex = re.compile(pattern, re.IGNORECASE)
 
-        data['updated_post'] = submission.selftext
-        data['updated_reply'] = reply_msg
-        data['curr_words'] = cur_words
+    actual = regex.sub(replace,original)
 
-        return(data)
-
-# returns the number of words in the longest paragraph
-def count_words_max(text):
-    #paragraphs = text.split('\n\n') # one \n renders as the same paragraph in markdown
-
-    ## in case there's 3 new line characters, remove 1 on the ends
-    #paragraphs = [p.strip('\n') for p in paragraphs]
-
-    ## if there's a single new line character, replace it with a normal space, because it's a word break
-    #paragraphs = [p.replace('\n',' ') for p in paragraphs]
-    
-    lengths = [count_words(p) for p in split_by_paragraph(text)]
-    return(max(lengths))
-
-# returns the number of words, assuming this is one paragraph
-def count_words(text):
-
-    # replace all white space with single space characters
-    for c in string.whitespace:
-        text = text.replace(c,' ')
-
-    # remove punctuation
-    for c in string.punctuation:
-        text = text.replace(c,'')
-
-    # split by white space
-    words = text.split(' ')
-
-    # get rid of empty words (e.g. was punctuation, or multiple consecutive white space
-    words = [w for w in words if w != '']
-
-    count = len(words)
-
-    return(count)
-
-def test_count_words():
-    print('Testing count_words_max()')
-    example = 'I\'ve got to get out of, here now!\n\nNo use stayin\'\nyeah you heard me, that is what I said'
-    expected = 12
-    actual = count_words_max(example)
+    if expected != actual:
+       print("expected: %s" % expected)
+       print("actual: %s" % actual)
     assert(expected == actual)
-    print('count_words() test passed')
+
+# returns a new url if the original is AMP
+# otherwise return None
+# do this outside the function, to cache it between lambda invocations
+patterns = [
+        r"http(s?):\/\/www\.google\.com\/amp\/s\/(\S+)",
+        r"http(s?):\/\/[^\/]+.ampproject.org/v/s\/(\S+)",
+        r"http(s?):\/\/amp\.(\S+)",
+        r"http(s?):\/\/\S+\/amp\/\S+"
+
+]
+regexs = [re.compile(pattern,re.IGNORECASE) for pattern in patterns]
+def isAMP(url):
+    return(any([regex.match(url) for regex in regexs]))
+
+# url can be a string which contains a URL
+# if the argument contains an AMP link, this function returns the canonical link
+# otherwise, returns None
+def convertURL(url):
+    if not isAMP(url):    
+        print("Not AMP link: %s" % url)
+        return(None)
+
+    print("Is AMP link: %s" % url)
+    download = downloadWebPage(url)
+    if download['status'] != 200:
+        print("Not sure how to convert URL")
+        return(None)
+
+    soup = bs(download['html'], 'html.parser')    
+
+    choices = []
+    # inside <head></head> grab meta tags
+    #   <meta property="og:url" content="https://www.mdavis.xyz/" />
+    #   <link href="https://www.9news.com.au/2019/02/15/21/17/perth-news-vegan-farmer-fight" rel="canonical">
+    metaTags = soup.find_all('meta',attrs={'property':'og:url'})
+    choices += [tag.get('content') for tag in metaTags]
+
+    linkTags = soup.find_all('link',attrs={'rel':'canonical'})
+    choices += [tag.get('href') for tag in linkTags]
+   
+    pp.pprint({'original':url,'possibilities':choices})
+    if any([isAMP(u) for u in choices]):
+       print("some canonical links are still AMP: ")
+       print('\n'.join([u for u in choices if isAMP(u)]))
+    choices = set([c for c in choices if not isAMP(c)])
+
+    if any(c.startswith('https://') for c in choices):
+       choices = set([c for c in choices if not c.startswith('http://')])
+    assert(len(choices) > 0)
+
+    if len(choices) > 1:
+       print("Multiple options for %s:" % url)
+       print("\n   ".join(choices))
+
+    choice = list(choices)[0]
+
+    print("FROM %s" % url)
+    print("TO   %s" % choice)
+
+    assert(not isAMP(choice))
+
+    return(choice)
+
+
+def testAll(): 
+    testRegex()
+    # check simple domain changes 
+    data = [
+       {"before": "https://www.google.com/amp/s/amp.theguardian.com/lifeandstyle/2019/feb/23/truth-world-built-for-men-car-crashes",
+        "after": "https://www.theguardian.com/lifeandstyle/2019/feb/23/truth-world-built-for-men-car-crashes"
+        },
+       {"before": "https://www-rawstory-com.cdn.ampproject.org/v/s/www.rawstory.com/2019/02/fox-friends-host-says-hasnt-washed-hands-10-years-germs-not-real-thing-cant-see/amp/?amp_js_v=a2&amp_gsa=1#referrer=https%3A%2F%2Fwww.google.com&amp_tf=From%20%251%24s&ampshare=https%3A%2F%2Fwww.rawstory.com%2F2019%2F02%2Ffox-friends-host-says-hasnt-washed-hands-10-years-germs-not-real-thing-cant-see%2F",
+        "after": "https://www.rawstory.com/2019/02/fox-friends-host-says-hasnt-washed-hands-10-years-germs-not-real-thing-cant-see/"
+        },
+        {"before": "https://www-telegraph-co-uk.cdn.ampproject.org/v/s/www.telegraph.co.uk/news/2018/12/15/iranian-asylum-seeker-raped-17-year-old-spared-deportation-due/amp/?amp_js_v=a2&amp_gsa=1#referrer=https%3A%2F%2Fwww.google.com&amp_tf=From%20%251%24s&ampshare=https%3A%2F%2Fwww.telegraph.co.uk%2Fnews%2F2018%2F12%2F15%2Firanian-asylum-seeker-raped-17-year-old-spared-deportation-due%2F",
+         "after": "https://www.telegraph.co.uk/news/2018/12/15/iranian-asylum-seeker-raped-17-year-old-spared-deportation-due/"
+         },
+        {"before": "https://www.google.com/amp/s/www.seattletimes.com/seattle-news/data/kids-making-a-comeback-more-than-100000-under-18-in-seattle-for-the-first-time-in-50-years/%3Famp%3D1",
+         "after": "https://www.seattletimes.com/seattle-news/data/kids-making-a-comeback-more-than-100000-under-18-in-seattle-for-the-first-time-in-50-years/"
+         },
+        {"before": "https://www.google.com/amp/s/anps.org/2018/05/30/know-your-natives-death-camas/amp/",
+         "after": "https://anps.org/2018/05/30/know-your-natives-death-camas/"
+         },
+        {"before": "https://www.google.com/amp/s/www.christianpost.com/amp/dr-phil-exposes-cult-that-some-say-is-masking-itself-as-christian-church-in-wells-texas.html",
+         "after": "https://www.christianpost.com/news/dr-phil-exposes-cult-that-some-say-is-masking-itself-as-christian-church-in-wells-texas.html"
+         },
+        {"before": "https://www.google.com/amp/s/www.fatherly.com/news/masturbation-robot-sperm-collector-chinese/amp/",
+         "after": "https://www.fatherly.com/news/masturbation-robot-sperm-collector-chinese/"
+         },
+        {"before": "https://www.google.com/amp/s/us.blastingnews.com/showbiz-tv/2018/09/got-leak-claims-tyrion-will-be-found-guilty-of-treason-in-the-dragonpit-trial-002710077.amp.html",
+         "after": "https://us.blastingnews.com/showbiz-tv/2018/09/got-leak-claims-tyrion-will-be-found-guilty-of-treason-in-the-dragonpit-trial-002710077.html"
+         },
+        {"before": "https://amp.smh.com.au/federal-election-2019/morrison-caught-lying-bowen-demands-answers-from-treasury-over-387-billion-tax-costing-20190412-p51dl7.html?__twitter_impression=true",
+         "after": "https://www.smh.com.au/federal-election-2019/morrison-caught-lying-bowen-demands-answers-from-treasury-over-387-billion-tax-costing-20190412-p51dl7.html"
+         },
+        {"before": "https://amp.9news.com.au/article/f4dbc610-b8f8-4fe6-9226-f3029b002d98",
+         "after": "https://www.9news.com.au/2019/02/15/21/17/perth-news-vegan-farmer-fight"
+         },
+        {"before": "https://uk.mobile.reuters.com/article/amp/idUKKBN1GH2V6",
+         "after": "https://uk.reuters.com/article/uk-britain-russia-idUKKBN1GH2V6"
+         }
+        ]
+
+
+    for urls in data:
+        actual = convertURL(urls['before'])
+        if not actual:
+            print("\n\nAMP link not detected as AMP link: %s" % urls['before'])
+        assert(actual)
+        assert(convertURL(urls['after']) == None)
+        actual = convertURL(urls['before'])
+        if actual != urls['after']:
+            print("\n"*5)
+            print("\nbefore: %s" % urls['before'])
+            print("\nexpected: %s" % urls['after'])
+            print("\nactual: %s" % actual)
+        assert(actual == urls['after'])
 
 if __name__ == '__main__':
     print('common.py invoked standalone, running unit tests')

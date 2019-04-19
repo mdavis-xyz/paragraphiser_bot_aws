@@ -19,14 +19,12 @@ rm -rf env
 virtualenv -p /usr/bin/python3.6 ./env
 . env/bin/activate
 # pip install nose
-pip install boto3
-pip install praw
-pip install mako # dependency of common
+pip install -r requirements.txt
 
 rm -rf include
 mkdir include
 cp $1/credentials/praw.ini include/praw.ini
-for DEP in common.py errors.py replyTemplateNew.mako replyTemplateNewSplit.mako example-big-01.md  example-big-02.md  example-small-01.md example-special.md
+for DEP in common.py errors.py 
 do
     cp $1/util/$DEP include/$DEP
 done

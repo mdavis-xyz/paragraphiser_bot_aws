@@ -67,6 +67,16 @@ class Lam(object):
                 }
                 )
 
+                # enable versioning
+                response = client.put_bucket_versioning(
+		    Bucket=self.code_bucket,
+		    VersioningConfiguration={
+			'MFADelete': 'Disabled',
+			'Status': 'Enabled'
+		    }
+
+		) 
+
             # list of {'name':x,'return_val':s3version}
             results = self.do_work('upload',self.upload_one)
             versions = [{'name':x['name'],'S3Version':x['return_val']} for x in results]

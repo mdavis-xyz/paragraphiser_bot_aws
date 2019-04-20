@@ -1,5 +1,3 @@
-import praw
-import prawcore
 import os
 import pprint as pp
 import boto3
@@ -9,6 +7,7 @@ import json
 import common
 import re
 import errors
+import praw
 import prawcore
 
 def lambda_handler(event,context):

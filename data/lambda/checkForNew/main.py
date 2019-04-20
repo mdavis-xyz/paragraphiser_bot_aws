@@ -1,5 +1,3 @@
-import praw
-import prawcore
 import os
 import pprint as pp
 import boto3
@@ -8,6 +6,8 @@ import time
 import json
 import common
 import errors
+import praw
+import prawcore
 
 SEC_PER_MIN = 60
 MIN_PER_H = 60

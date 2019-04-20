@@ -53,7 +53,7 @@ def generate_reply(submission,debug=False):
 
     else: # link post
         newURL = convertURL(submission.url)
-        if newURL and (newURL not in selftext):
+        if newURL:
             print("Submission %s links to AMP link %s which corresponds to: %s" % (submission.id,submission.url,newURL))
             reply = getReplyDict(newURL)
             if otherAMPBot(submission):
@@ -168,10 +168,10 @@ def isAMP(url):
 # otherwise, returns None
 def convertURL(url):
     if not isAMP(url):    
-        print("Not AMP link: %s" % url)
+        print("No AMP link")
         return(None)
 
-    print("Is AMP link: %s" % url)
+    print("Conatins AMP link: %s" % url)
     download = downloadWebPage(url)
     if download['status'] != 200:
         print("Not sure how to convert URL")

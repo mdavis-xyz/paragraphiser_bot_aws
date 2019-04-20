@@ -19,7 +19,7 @@ rm -rf env
 virtualenv -p /usr/bin/python3.6 ./env
 . env/bin/activate
 # pip install nose
-pip install -r requirements.txt
+pip install boto3 praw certifi beautifulsoup4 mako
 
 rm -rf include
 mkdir include

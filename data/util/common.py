@@ -10,6 +10,7 @@ import re
 import certifi
 import urllib3
 from bs4 import BeautifulSoup as bs
+import praw
 
 
 otherAMPBot = 'AntiGoogleAmpBot'
@@ -24,6 +25,7 @@ hash_key_val = 'data'
 def unit_tests():
     testAll()
     testGetReplyDict()
+    testSelfPost()
     return()
 
 
@@ -40,16 +42,19 @@ def generate_reply(submission,debug=False):
 
     if submission.is_self:
         newURL = convertURL(submission.selftext)
-        if newURL and (newURL not in selftext):
+        if not newURL:
+            print("Submission %s did not contain any AMP links" % submission.id)
+            return(None)
+        elif newURL in submission.selftext:
+            print("submission %s includes the canonical link too")
+            return(None)
+        else:
             print("Submission %s selftext contains URL, new one is: %s" % (submission.id,newURL))
             reply = getReplyDict(newURL) 
             if otherAMPBot(submission): 
                 print("Other AMP bot has already replied to %s, returning None" % submission.id)
                 return(None)
             return(reply)
-        else:
-            print("Submission %s did not contain any AMP links" % submission.id)
-            return(None)
 
     else: # link post
         newURL = convertURL(submission.url)
@@ -63,6 +68,21 @@ def generate_reply(submission,debug=False):
         else:
             print("Submission %s did not link to an AMP link, url was %s" % (submission.id,submission.url))
             return(None)
+
+def testSelfPost():
+    postId = 'bf826q' #https://www.reddit.com/r/bottest/comments/bf826q/test/
+    print("Running unit tests for post %s" % postId)
+    expected = 'https://uk.reuters.com/article/uk-britain-russia-idUKKBN1GH2V6'
+    reddit = praw.Reddit('bot1')
+
+    submission = reddit.submission(id=postId)
+
+    actual = convertURL(submission.selftext)
+
+    assert(actual == expected)
+
+    reply = generate_reply(submission)
+    assert(reply == getReplyDict(expected))
 
 # returns true if that other AMP bot has replied
 def otherAMPBot(submission):
@@ -149,29 +169,46 @@ def testRegex():
        print("actual: %s" % actual)
     assert(expected == actual)
 
+    pattern = r"http(s?):\/\/[^\)\s]+"
+    text = "[link](https://something.com/blah)"
+    expected = "https://something.com/blah"
+    regex = re.compile(pattern,re.IGNORECASE)
+    match = regex.search(text)
+    assert(match)
+    assert(match.group(0) == expected)
+
 # returns a new url if the original is AMP
 # otherwise return None
 # do this outside the function, to cache it between lambda invocations
 patterns = [
-        r"http(s?):\/\/www\.google\.com\/amp\/s\/(\S+)",
-        r"http(s?):\/\/[^\/]+.ampproject.org/v/s\/(\S+)",
-        r"http(s?):\/\/amp\.(\S+)",
-        r"http(s?):\/\/\S+\/amp\/\S+"
+        r"http(s?):\/\/www\.google\.com\/amp\/s\/[^\s\)]+",
+        r"http(s?):\/\/[^\/]+.ampproject.org/v/s\/[^\s\)]+",
+        r"http(s?):\/\/amp\.[^\s\)]+",
+        r"http(s?):\/\/\S+\/amp\/[^\s\)]+"
 
 ]
 regexs = [re.compile(pattern,re.IGNORECASE) for pattern in patterns]
-def isAMP(url):
-    return(any([regex.match(url) for regex in regexs]))
+# returns the url extracted from text, if there is an AMP url in the text
+# otherwise return None
+def getAMP(text):
+    for regex in regexs:
+        match = regex.search(text)
+        if match:
+            return(match.group(0))
+    return(None)
 
-# url can be a string which contains a URL
+
+
+# text is a string which may contain a URL
 # if the argument contains an AMP link, this function returns the canonical link
 # otherwise, returns None
-def convertURL(url):
-    if not isAMP(url):    
+def convertURL(text):
+    url = getAMP(text)
+    if not url:    
         print("No AMP link")
         return(None)
 
-    print("Conatins AMP link: %s" % url)
+    print("Contains AMP link: %s" % url)
     download = downloadWebPage(url)
     if download['status'] != 200:
         print("Not sure how to convert URL")
@@ -190,10 +227,10 @@ def convertURL(url):
     choices += [tag.get('href') for tag in linkTags]
    
     pp.pprint({'original':url,'possibilities':choices})
-    if any([isAMP(u) for u in choices]):
+    if any([getAMP(u) for u in choices]):
        print("some canonical links are still AMP: ")
-       print('\n'.join([u for u in choices if isAMP(u)]))
-    choices = set([c for c in choices if not isAMP(c)])
+       print('\n'.join([u for u in choices if getAMP(u)]))
+    choices = set([c for c in choices if not getAMP(c)])
 
     if any(c.startswith('https://') for c in choices):
        choices = set([c for c in choices if not c.startswith('http://')])
@@ -208,7 +245,7 @@ def convertURL(url):
     print("FROM %s" % url)
     print("TO   %s" % choice)
 
-    assert(not isAMP(choice))
+    assert(not getAMP(choice))
 
     return(choice)
 
@@ -254,6 +291,13 @@ def testAll():
 
 
     for urls in data:
+        try:
+            assert(getAMP(urls['before']) == urls['before'])
+        except AssertionError as e:
+            print("\n\nbefore: %s" % urls['before'])
+            print("after: %s" % getAMP(urls['before']))
+            raise(e)
+        assert(not getAMP(urls['after']))
         actual = convertURL(urls['before'])
         if not actual:
             print("\n\nAMP link not detected as AMP link: %s" % urls['before'])
@@ -263,6 +307,22 @@ def testAll():
         if actual != urls['after']:
             print("\n"*5)
             print("\nbefore: %s" % urls['before'])
+            print("\nexpected: %s" % urls['after'])
+            print("\nactual: %s" % actual)
+        assert(actual == urls['after'])
+        selftext = 'Here is [a link](%s)' % urls['before']
+        if not getAMP(selftext):
+            print("selftext:\n%s" % selftext)
+        try:
+            assert(getAMP(selftext) == urls['before'])
+        except AssertionError as e:
+            print("selftext: %s" % selftext)
+            print("AMP url with getAMP(): %s" % getAMP(selftext))
+            raise(e)
+        actual = convertURL(selftext)
+        if actual != urls['after']:
+            print("\n"*5)
+            print("\nbefore: %s" % selftext)
             print("\nexpected: %s" % urls['after'])
             print("\nactual: %s" % actual)
         assert(actual == urls['after'])

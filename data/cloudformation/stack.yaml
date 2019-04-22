@@ -180,7 +180,7 @@ Resources:
                    bot_name:
                        Ref: "botname"
                    subreddits:
-                       "bottest" # comma separated
+                       "bottest,StallmanWasRight,technology,linux,ainbow" # comma separated
                    enable:
                        TRUE
                    errorHandlerArn:

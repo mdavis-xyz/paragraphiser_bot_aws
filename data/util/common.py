@@ -11,6 +11,8 @@ import certifi
 import urllib3
 from bs4 import BeautifulSoup as bs
 import praw
+from praw.models import MoreComments
+
 
 
 otherAMPBot = 'AntiGoogleAmpBot'
@@ -26,6 +28,9 @@ def unit_tests():
     testAll()
     testGetReplyDict()
     testSelfPost()
+
+    reddit = praw.Reddit('bot1')
+    otherBotRecent(reddit)
     return()
 
 
@@ -37,13 +42,15 @@ def unit_tests():
 # and it will be returned in update_reply when we come back to
 # check how your comment is doing
 def generate_reply(submission,debug=False):
-    print('generate_reply called on post %s' % submission.id)
+    if debug:
+        print('generate_reply called on post %s' % submission.id)
 
 
     if submission.is_self:
-        newURL = convertURL(submission.selftext)
+        newURL = convertURL(submission.selftext,debug=debug)
         if not newURL:
-            print("Submission %s did not contain any AMP links" % submission.id)
+            if debug:
+                print("Submission %s did not contain any AMP links" % submission.id)
             return(None)
         elif newURL in submission.selftext:
             print("submission %s includes the canonical link too")
@@ -51,22 +58,26 @@ def generate_reply(submission,debug=False):
         else:
             print("Submission %s selftext contains URL, new one is: %s" % (submission.id,newURL))
             reply = getReplyDict(newURL) 
-            if otherAMPBot(submission): 
-                print("Other AMP bot has already replied to %s, returning None" % submission.id)
-                return(None)
+            #if otherAMPBotReplied(submission): 
+            #    print("Other AMP bot has already replied to %s, returning None" % submission.id)
+            #    return(None)
             return(reply)
 
     else: # link post
-        newURL = convertURL(submission.url)
+        newURL = convertURL(submission.url,debug=debug)
         if newURL:
             print("Submission %s links to AMP link %s which corresponds to: %s" % (submission.id,submission.url,newURL))
             reply = getReplyDict(newURL)
-            if otherAMPBot(submission):
-                print("Other AMP bot has already replied to %s, returning None" % submission.id)
-                return(None)
+            #print("Checking whether the other AMP bot has already replied to %s" % submission.id)
+            #if otherAMPBotReplied(submission):
+            #    print("Other AMP bot has already replied to %s, returning None" % submission.id)
+            #    return(None)
+            #else:
+            #    print("Other AMP bot has not already replied, returning reply")
             return(reply)
         else:
-            print("Submission %s did not link to an AMP link, url was %s" % (submission.id,submission.url))
+            if debug:
+                print("Submission %s did not link to an AMP link, url was %s" % (submission.id,submission.url))
             return(None)
 
 def testSelfPost():
@@ -77,19 +88,54 @@ def testSelfPost():
 
     submission = reddit.submission(id=postId)
 
-    actual = convertURL(submission.selftext)
+    actual = convertURL(submission.selftext,debug=True)
 
     assert(actual == expected)
 
     reply = generate_reply(submission)
     assert(reply == getReplyDict(expected))
 
+# returns a list of post IDs which the other bot
+# has replied to recently
+def otherBotRecent(reddit):
+    submission_ids = []
+    print("Getting new comments from %s" % otherAMPBot)
+    # as a for loop so I can see how long each one takes
+    limit = 30
+    for (i,c) in enumerate(reddit.redditor(otherAMPBot).stream.comments()):
+        if i >= min(limit,99): # the default for a stream. I don't know how else to break
+            break
+        print("Comment %s for submission %s by %s" % (c.id,c.submission.id,otherAMPBot))
+        submission_ids.append(c.submission.id)
+    print("Got list of recent submissions from %s" % otherAMPBot)
+    return(submission_ids)
+
 # returns true if that other AMP bot has replied
-def otherAMPBot(submission):
-    submission.comments.replace_more(limit=None)
+def otherAMPBotReplied(submission):
+    print("checking if other AMP bot has replied to post %s" % submission.id)
+    limit = os.getenv('replace_more_limit',10)
+    if limit == None:
+        print("calling replace_more(limit=None)")
+    else:
+        limit = int(limit)
+        print("calling replace_more(limit=%d)" % limit)
+
+    submission.comments.replace_more(limit=limit) # number of MoreComments instances to replace
+    print("Finished calling replace_more")
+
     for comment in submission.comments:
-        if comment.author.id == otherAMPBot:
-            return(True)
+        print("Checking comment %s" % comment.id)
+        try:
+            if (not isinstance(comment,MoreComments)) and (comment.author.id == otherAMPBot):
+                print("Other AMP bot did reply to %s" % submission.id)
+                return(True)
+        except AttributeError as e:
+            print("submission is %s" % submission.id)
+            print("Comment is: %s" % comment)
+            print("Comment body: %s" % comment.body)
+            print("Author is: %s" % comment.author)
+            raise(e)
+    print("other AMP did not reply (at least not in the comments I saw")
     return(False)
 
 
@@ -99,11 +145,13 @@ def testOtherAMPBot():
     # I don't have any positive tests
     # since I don't think that bot actually replies to posts, only to comments
     tests = [
-       (False,"https://www.reddit.com/r/worldnews/comments/besihy/mueller_identified_dozens_of_us_rallies_organized/")
+       (False,"https://www.reddit.com/r/worldnews/comments/besihy/mueller_identified_dozens_of_us_rallies_organized/"),
     ]
     for (expected,postURL) in tests:
         submission = reddit.submission(url=postURL)
-        assert(expected == otherAMPBot(submission))
+        assert(expected == otherAMPBotReplied(submission))
+
+
 
 
 # outside function, to cache between lambda invocations
@@ -113,7 +161,9 @@ with open('template.md','r') as f:
 # takes in a canonical URL,
 # returns a dict with {'original_reply':text}
 def getReplyDict(url):
+    print("Generating reply with url = %s" % url)
     text = template.render(url=url)
+    print("Reply generated for url %s" % url)
     return({'original_reply':text})
 
 def testGetReplyDict():
@@ -202,10 +252,11 @@ def getAMP(text):
 # text is a string which may contain a URL
 # if the argument contains an AMP link, this function returns the canonical link
 # otherwise, returns None
-def convertURL(text):
+def convertURL(text,debug=False):
     url = getAMP(text)
     if not url:    
-        print("No AMP link")
+        if debug:
+            print("No AMP link")
         return(None)
 
     print("Contains AMP link: %s" % url)

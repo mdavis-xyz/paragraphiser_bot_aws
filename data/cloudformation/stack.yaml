@@ -167,7 +167,7 @@ Resources:
               S3ObjectVersion: !Ref "checkForNewS3Version"
             Handler: main.lambda_handler
             Runtime: python3.6
-            Timeout: 300
+            Timeout: 100
             Role:
                 "Fn::GetAtt": ["ExecutionRole", "Arn"]
             Environment:
@@ -179,12 +179,14 @@ Resources:
                        Ref: "postHistoryTable"
                    bot_name:
                        Ref: "botname"
-                   subreddits:
-                       "bottest,StallmanWasRight,technology,linux,ainbow" # comma separated
+                   subreddits: # comma separated
+                       "bottest,StallmanWasRight,technology,linux,ainbow,ABoringDystopia,Android,AusPol,Australia,Bitcoin,Buttcoin,CryptoCurrency,DarkFuturology,dataisbeautiful,design,frontend,linux,netflix,opensource,piracy,privacy,science,stopbeingevil,sydney,todayilearned"
                    enable:
                        TRUE
                    errorHandlerArn:
                        Fn::GetAtt: ["errorHandler", "Arn"]
+                   replace_more_limit:
+                       10
 
       errorAlarmCheckForNew:
          Type: "AWS::CloudWatch::Alarm"

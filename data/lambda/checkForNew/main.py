@@ -26,6 +26,7 @@ def lambda_handler(event,context):
     if ('unitTest' in event) and event['unitTest']:
         print('Running unit tests')
         common.unit_tests()
+        look_for_new({'post_id':'bg2c86'},context,dry_run=True)
         look_for_new(event,context,dry_run=True)
     elif os.environ['enable'] not in [True,'true','True','TRUE',1]:
         print('Function disabled')
@@ -35,16 +36,40 @@ def lambda_handler(event,context):
 
 
 def look_for_new(event,context,dry_run=False):
-    print('Looking for new posts')
 
     reddit = praw.Reddit('bot1')
-    subreddits = os.environ['subreddits'].split(',')
 
-    for sub_name in subreddits:
-        print('subreddit: ' + sub_name)
-        check_subreddit(sub_name,dry_run=dry_run)
+    if 'post_id' in event:
+        post_id = event['post_id']
+        print("Checking just post %s" % post_id)
+        if post_id in keys_exist([post_id]):
+            print("Post %s has already been replied to, doing nothing" % post_id)
+        else:
+            submission = reddit.submission(id=post_id)
+            reply = common.generate_reply(submission)
+            if reply:
+                if submission.id in common.otherBotRecent(reddit):
+                    print("Not replying to %s because other bot already has" % submission.id)
+                else:
+                    print("Other bot has not replied to %s" % submission.id)
+                    reply_and_save(reply,submission,dry_run)
+            else:
+                print("Not replying to submission %s" % post_id)
+    else:
+        print('Looking for new posts')
+        print("First getting posts by other bot")
+        other_bot_recent = common.otherBotRecent(reddit)
+        print("Got posts by other bot")
 
-def check_subreddit(sub_name,dry_run=False):
+        subreddits = [r.strip() for r in os.environ['subreddits'].split(',') if r.strip() != '']
+
+        for sub_name in subreddits:
+            assert(sub_name.strip() != '')
+            assert(not any([c in sub_name for c in ',;/']))
+            print('subreddit: ' + sub_name)
+            check_subreddit(sub_name,other_bot_recent,dry_run=dry_run)
+
+def check_subreddit(sub_name,other_bot_recent=[],dry_run=False):
 
     skipped_posts = 0
     limit = int(os.getenv('num_to_scan',20))
@@ -83,31 +108,24 @@ def check_subreddit(sub_name,dry_run=False):
 
     if len(submissions) != 0:
 
-        replies = [common.generate_reply(s) for s in submissions]
-
-        # drop submissions where generate_reply returned None
-        submissions = [s for (s,r) in zip(submissions,replies) if r != None]
-        replies = [r for r in replies if r != None]
-
-        if len(replies) == 0:
-            print('None of the new posts are eligible for reply')
-        else:
-            if dry_run:
-                print('I would reply to the following posts:')
-            else:
-                print('About to reply to the following %d posts:' % len(submissions))
-            print('\n   '+ '\n   '.join([s.id for s in submissions]))
-
-            comment_ids = []
-
-            for (r,s) in zip(replies,submissions):
-                reply_and_save(r,s,dry_run)
-                time.sleep(10) # praw isn't handling throttling as well as it should
+        print("Iterating through remaining submissions:")
+        num_replied = 0
+        for submission in submissions:
+            reply = common.generate_reply(submission)
+            if reply != None:
+                if submission.id in other_bot_recent:
+                    print("Would comment on %s, but the other bot did already" % submission.id)
+                else:
+                    num_replied += 1
+                    reply_and_save(reply,submission,dry_run)
+                    if not dry_run:
+                        print("Sleeping for a bit")
+                        time.sleep(10) # praw isn't handling throttling as well as it should
 
     if dry_run:
-        print('Would have replied to %d posts, skipped %d posts' % (len(submissions),limit-len(submissions)))
+        print('Would have replied to %d posts, skipped %d posts' % (num_replied,limit-num_replied))
     else:
-        print('Replied to %d posts, skipped %d posts' % (len(submissions),limit-len(submissions)))
+        print('Replied to %d posts, skipped %d posts' % (num_replied,limit-num_replied))
 
 def reply_and_save(reply,submission,dry_run):
 
@@ -241,3 +259,11 @@ def schedule_checks(post_id,dry_run):
             time.sleep(2/5) # python 3 does this as a float
 
     print('Finished scheduling messages for later for post %s' % post_id)
+
+if __name__ == '__main__':
+    post_id = 'bg2c86'
+    event = {'post_id':post_id}
+    context = None
+    print("Calling look_for_new from __main__")
+    look_for_new(event,context,dry_run=True)
+    print("Done")

@@ -167,7 +167,7 @@ Resources:
               S3ObjectVersion: !Ref "checkForNewS3Version"
             Handler: main.lambda_handler
             Runtime: python3.6
-            Timeout: 100
+            Timeout: 300
             Role:
                 "Fn::GetAtt": ["ExecutionRole", "Arn"]
             Environment:

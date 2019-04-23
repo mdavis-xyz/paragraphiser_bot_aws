@@ -8,7 +8,8 @@ Google *claim* that it makes web pages faster, but it actually makes them [slowe
 It only benefits Google, helping them tighten their stranglehold on a free, open standardised web.
 
 Publishers suffer through commoditisation of news.
-Readers suffer because content is detatched from it's source, so articles from low quality or corrupt sources is presented just like legitimate content.
+Readers suffer from slower page loads.
+Also, content is detatched from its source, so articles from low quality or corrupt sources are branded and styled by Google just like legitimate content.
 
 To avoid finding AMP links, you should switch from Google search to a pro-user alternative such as [Duck Duck Go](http://duckduckgo.com/).
 Unlike Google, Duck Duck Go [do not track you](https://donttrack.us/), and their [search results are better](https://spreadprivacy.com/google-filter-bubble-study/).

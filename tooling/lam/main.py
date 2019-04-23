@@ -12,6 +12,7 @@ import zipfile
 import json
 import base64
 import sys
+import time
 
 class Lam(object):
 
@@ -348,12 +349,18 @@ class Lam(object):
         client = boto3.client('lambda')
         remote_name = self.local_name_to_remote(name)
         # https://boto3.readthedocs.io/en/docs/reference/services/lambda.html#Lambda.Client.invoke
-        response = client.invoke(
-            FunctionName=remote_name,
-            InvocationType='RequestResponse',
-            Payload=json.dumps({'unitTest':True}).encode(),
-            LogType='Tail'
-        )
+        start = time.time()
+        try:
+            response = client.invoke(
+                FunctionName=remote_name,
+                InvocationType='RequestResponse',
+                Payload=json.dumps({'unitTest':True}).encode(),
+                LogType='Tail'
+            )
+        except Exception as e:
+            end = time.time()
+            print("Invocation took %.2f seconds" % (end - start))
+            raise(e)
 
         #pp.pprint(response)
 

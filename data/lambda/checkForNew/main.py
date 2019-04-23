@@ -58,18 +58,30 @@ def look_for_new(event,context,dry_run=False):
     else:
         print('Looking for new posts')
         print("First getting posts by other bot")
+        start = time.time()
         other_bot_recent = common.otherBotRecent(reddit)
-        print("Got posts by other bot")
+        end = time.time()
+        print("Got posts by other bot (took %.1f seconds)" % (end - start))
 
         subreddits = [r.strip() for r in os.environ['subreddits'].split(',') if r.strip() != '']
-
+        start = time.time()
         for sub_name in subreddits:
+            now = time.time()
+            if dry_run and ((now - start) > 30): # when invoked over http, timeout is short
+                print("Breaking out of for loop for test")
+                break
             assert(sub_name.strip() != '')
             assert(not any([c in sub_name for c in ',;/']))
             print('subreddit: ' + sub_name)
+            start = time.time()
             check_subreddit(sub_name,other_bot_recent,dry_run=dry_run)
+            end = time.time()
+            print("Took %.1f seconds to check subreddit %s" % (end-start,sub_name))
+    print("look_for_new returning")
 
 def check_subreddit(sub_name,other_bot_recent=[],dry_run=False):
+
+    start = time.time()
 
     skipped_posts = 0
     limit = int(os.getenv('num_to_scan',20))
@@ -108,9 +120,14 @@ def check_subreddit(sub_name,other_bot_recent=[],dry_run=False):
 
     if len(submissions) != 0:
 
+        end = time.time()
+        print("Everything for sub %s prior to for loop took %.1f seconds" % (sub_name,end - start))
+
         print("Iterating through remaining submissions:")
         num_replied = 0
+        start_loop = time.time()
         for submission in submissions:
+            start_subm = time.time()
             reply = common.generate_reply(submission)
             if reply != None:
                 if submission.id in other_bot_recent:
@@ -118,9 +135,13 @@ def check_subreddit(sub_name,other_bot_recent=[],dry_run=False):
                 else:
                     num_replied += 1
                     reply_and_save(reply,submission,dry_run)
-                    if not dry_run:
-                        print("Sleeping for a bit")
-                        time.sleep(10) # praw isn't handling throttling as well as it should
+                    end_subm = time.time()
+                    print("Checking and replying to post %s took %.1f seconds" % (submission.id,end_subm-start_subm))
+                    #if not dry_run:
+                    #    print("Sleeping for a bit")
+                    #    time.sleep(10) # praw isn't handling throttling as well as it should
+        end_loop = time.time()
+        print("Loop for sub %s took %.1f seconds" % (sub_name,end_loop-start_loop))
 
     if dry_run:
         print('Would have replied to %d posts, skipped %d posts' % (num_replied,limit-num_replied))

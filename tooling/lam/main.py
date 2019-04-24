@@ -13,6 +13,7 @@ import json
 import base64
 import sys
 import time
+import botocore
 
 class Lam(object):
 

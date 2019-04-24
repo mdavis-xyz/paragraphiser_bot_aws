@@ -346,7 +346,10 @@ class Lam(object):
 
     def test_one(self,name):
         print('   invoking test lambda for %s' % name)
-        client = boto3.client('lambda')
+
+        # disable retries for lambda invocations which fail
+        cfg = botocore.config.Config(retries={'max_attempts': 0})
+        client = boto3.client('lambda',config=cfg) # may need to add  region_name=self.region
         remote_name = self.local_name_to_remote(name)
         # https://boto3.readthedocs.io/en/docs/reference/services/lambda.html#Lambda.Client.invoke
         start = time.time()

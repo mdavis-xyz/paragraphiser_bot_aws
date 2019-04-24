@@ -27,7 +27,8 @@ def lambda_handler(event,context):
         print('Running unit tests')
         common.unit_tests()
         look_for_new({'post_id':'bg2c86'},context,dry_run=True)
-        look_for_new(event,context,dry_run=True)
+        subreddits = [r.strip() for r in os.environ['subreddits'].split(',') if r.strip() != '']
+        look_for_new(event,context,dry_run=True,subreddits=subreddits[0:2]) # keep it quick, because http invocation times out
     elif os.environ['enable'] not in [True,'true','True','TRUE',1]:
         print('Function disabled')
     else:
@@ -35,7 +36,7 @@ def lambda_handler(event,context):
         return(errors.capture_err(look_for_new,event,context))
 
 
-def look_for_new(event,context,dry_run=False):
+def look_for_new(event,context,dry_run=False,subreddits=None):
 
     reddit = praw.Reddit('bot1')
 
@@ -63,7 +64,10 @@ def look_for_new(event,context,dry_run=False):
         end = time.time()
         print("Got posts by other bot (took %.1f seconds)" % (end - start))
 
-        subreddits = [r.strip() for r in os.environ['subreddits'].split(',') if r.strip() != '']
+        if not subreddits:
+            subreddits = [r.strip() for r in os.environ['subreddits'].split(',') if r.strip() != '']
+        else:
+            assert(type(subreddits) == type(['']))
         start = time.time()
         for sub_name in subreddits:
             now = time.time()

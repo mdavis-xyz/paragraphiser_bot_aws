@@ -180,7 +180,7 @@ Resources:
                    bot_name:
                        Ref: "botname"
                    subreddits: # comma separated
-                       "bottest,StallmanWasRight,technology,linux,ainbow,ABoringDystopia,Android,AusPol,Australia,Bitcoin,Buttcoin,CryptoCurrency,DarkFuturology,dataisbeautiful,design,frontend,linux,netflix,opensource,piracy,privacy,science,stopbeingevil,sydney,todayilearned"
+                       "bottest,StallmanWasRight,technology,linux,ainbow,ABoringDystopia,Android,AusPol,Australia,Bitcoin,Buttcoin,CryptoCurrency,DarkFuturology,dataisbeautiful,design,frontend,linux,netflix,opensource,piracy,privacy,stopbeingevil,sydney,todayilearned"
                    enable:
                        TRUE
                    errorHandlerArn:

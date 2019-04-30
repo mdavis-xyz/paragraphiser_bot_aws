@@ -93,7 +93,7 @@ def check_subreddit(sub_name,other_bot_recent=[],dry_run=False):
     reddit = praw.Reddit('bot1')
     subreddit = reddit.subreddit(sub_name)
     try:
-        submissions = [s for s in subreddit.hot(limit=limit)]
+        submissions = [s for s in subreddit.new(limit=limit)]
     except prawcore.exceptions.ResponseException:
         print('Error: something went wrong, sleeping for 10 seconds then trying again, slower')
         time.sleep(10)

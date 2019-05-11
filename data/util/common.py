@@ -337,6 +337,9 @@ def testAll():
          },
         {"before": "https://uk.mobile.reuters.com/article/amp/idUKKBN1GH2V6",
          "after": "https://uk.reuters.com/article/uk-britain-russia-idUKKBN1GH2V6"
+         },
+        {"before": "https://www.bloomberg.com/amp/news/articles/2019-05-06/fidelity-said-to-offer-cryptocurrency-trading-within-a-few-weeks",
+         "after": "https://www.bloomberg.com/news/articles/2019-05-06/fidelity-said-to-offer-cryptocurrency-trading-within-a-few-weeks"
          }
         ]
 

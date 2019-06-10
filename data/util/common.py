@@ -7,6 +7,7 @@ import time
 from mako.template import Template
 import string
 import re
+import json
 
 # Apparently you can't have a dynamo table with just a
 # sort key. So I'll add an arbitrary hash key to the delay table, which will only have
@@ -29,7 +30,7 @@ def unit_tests():
 # returns True if sensitive topics included
 def keywordFilter(text):
     keywords = [
-       'rape','assault','suicide'
+       'rape','assault','suicide','paedofile'
     ]
 
     words = [w.lower().rstrip('.!?;,') for w in text.replace('\n',' ').split(' ') if w.strip() != '']
@@ -157,7 +158,7 @@ def max_paragraph_size(text):
 # if you want to comment on this post, return
 # {'original_reply':msg}, where msg is a markdown formatted
 # comment which will be used to generate a reply
-# this return dict may other data (1 level deep though)
+# this return dict may contain other data (1 level deep though)
 # and it will be returned in update_reply when we come back to
 # check how your comment is doing
 def generate_reply(submission,debug=False):
@@ -170,7 +171,8 @@ def generate_reply(submission,debug=False):
         return(None)
     else:
         print([c for c in submission.selftext[100:130]])
-        max_size = max_paragraph_size(submission.selftext)
+        max_size = max_paragraph_size(submission.selftext) # num chars
+        max_words = count_words_max(submission.selftext)  # num words
         num_paragraphs = len(split_by_paragraph(submission.selftext))
         if max_size < size_limit:
             print('Submission %s is not eligible for reply because it is too short' % submission.id)
@@ -188,13 +190,12 @@ def generate_reply(submission,debug=False):
             # using mako library to pass data into the template
             reply_template_fname = './replyTemplateNewSplit.mako'
             print('using %s to generate reply for %s' % (reply_template_fname, submission.id))
-            max_words = count_words_max(submission.selftext)
             with open(reply_template_fname,'r') as f:
                 reply_msg = Template(f.read()).render(max_words=max_words)
 
         ret = {
             'original_reply':reply_msg,
-            'original_post':submission.selftext
+            'prev_words': max_words
         }
         print('generate_reply returning: %s' % str(ret))
         return(ret)
@@ -230,7 +231,12 @@ def update_reply(submission,comment,data):
         print('Submission %s was deleted, don\'t update comment')
         return(None)
     else:
-        prev_words = count_words_max(data['original_post'])
+        if 'prev_words' in data:
+            print("Found prev_words in data")
+            prev_words = data['prev_words']
+        else:
+            print("No prev_words in data, using original_post")
+            prev_words = count_words_max(data['original_post'])
         cur_words = count_words_max(submission.selftext)
 
         reply_template_fname = './replyTemplateUpdate.mako'
@@ -241,10 +247,10 @@ def update_reply(submission,comment,data):
                 prev_max=prev_words
             )
 
-        data['updated_post'] = submission.selftext
         data['updated_reply'] = reply_msg
-        data['curr_words'] = cur_words
+        #data['curr_words'] = cur_words
 
+        data = {'updated_reply': reply_msg}
         return(data)
 
 # returns the number of words in the longest paragraph
@@ -288,6 +294,32 @@ def test_count_words():
     actual = count_words_max(example)
     assert(expected == actual)
     print('count_words() test passed')
+
+def toDynamo(x):
+    if type(x) in [type(9),type(9.9)]:
+        return({'N':str(x)})
+    elif type(x) == '':
+        return({'S':x})
+    else:
+        return({'S':json.dumps(x)})
+
+def fromDynamo(x):
+    try:
+        if 'N' in x:
+            if '.' in x['N']:
+                return(float(x['N']))
+            else:
+                return(int(x['N']))
+        else:
+            try:
+                data = json.loads(x['S'])
+                return(data)
+            except json.decoder.JSONDecodeError:
+                return(x['S'])
+    except TypeError as e:
+        print("x is type %s" % str(type(x)))
+        print("x is %s" % str(x))
+        raise(e)
 
 if __name__ == '__main__':
     print('common.py invoked standalone, running unit tests')

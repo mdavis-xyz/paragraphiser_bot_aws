@@ -142,12 +142,13 @@ def save_initial(data,submission_id,comment_id,dry_run):
 
     now = int(time.time())
 
-    item = {
+    # save data by not writing original_reply
+    item = {k:common.toDynamo(data[k]) for k in data if k != 'original_reply'}
+    item.update({
         'post_id':{'S':submission_id},
         'comment_id':{'S':comment_id},
-        'data':{'S':json.dumps(data)},
         'initial_reply_time':{'N':str(now)} # boto requires numbers as strings
-    }
+    })
 
     if dry_run:
         print('Would save initial post data for %s' % submission_id)

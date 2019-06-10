@@ -32,7 +32,6 @@ def check_old(event,context):
 
     print('Getting data from dynamodb')
     post_info = load_post_info(post_id)
-    data = post_info['data']
     post_id = post_info['post_id']
     comment_id = post_info['comment_id']
 
@@ -45,13 +44,10 @@ def check_old(event,context):
     print('Getting comment %s' % comment_id)
     comment = reddit.comment(id=comment_id)
 
-    if 'updated_reply' in data:
-        prev_comment = data['updated_reply']
-    else:
-        prev_comment = data['original_reply']
+    prev_comment = comment.body
     
     try: 
-       ret = common.update_reply(submission,comment,data)
+       ret = common.update_reply(submission,comment,post_info)
     except prawcore.exceptions.ResponseException:
        print("Error: problem sending reply update to reddit, sleeping then trying again")
        time.sleep(60)
@@ -111,17 +107,23 @@ def load_post_info(post_id):
         print("Error: can't get post ID")
         raise(e)
 
-    data = json.loads(response['Item']['data']['S'])
+    if 'data' in response['Item']:
+        data = json.loads(response['Item']['data']['S'])
 
-    ret = {
-        'comment_id': response['Item']['comment_id']['S'],
-        'post_id': response['Item']['post_id']['S'],
-        'data': data,
-        'downvoted': ('downvoted' in response['Item'])
-    }
+        ret = {
+            'comment_id': response['Item']['comment_id']['S'],
+            'post_id': response['Item']['post_id']['S'],
+            'data': data,
+            'downvoted': ('downvoted' in response['Item'])
+        }
+    else:
+        # new schema
+        ret = {k:common.fromDynamo(response['Item'][k]) for k in response['Item']}
+        ret['downvoted'] = 'downvoted' in ret
 
-    #print('Dynamodb data for post %s: comment %s, data:' % (post_id,comment_id))
-    #pp.pprint(data)
+    print("ret is:")
+    pp.pprint(ret)
+    assert(type(ret['downvoted']) == type(True))
 
     return (ret)
 
@@ -212,24 +214,21 @@ def send_alert(comment,net_score):
 def update_data(data,post_id):
     table_name = os.environ['post_history_table']
     client = boto3.client('dynamodb')
+    item = {k:common.toDynamo(data[k]) for k in data if k != 'updated_reply'}
+    if len(item) == 0:
+        print("No data to update in table, not writing to dynamo")
+    else:
+        print('Updating data for post %s' % post_id)
 
-    print('Updating data for post %s' % post_id)
+        response = client.update_item(
+            TableName=table_name,  
+            Key={
+                'post_id':{'S':post_id}
+            },
+            AttributeUpdates=item
+        )
 
-    response = client.update_item(
-        TableName=table_name,  
-        Key={
-            'post_id':{'S':post_id}
-        },
-        AttributeUpdates={
-            'data':{
-                'Value':{
-                    'S':json.dumps(data)
-                }
-            }
-        }
-    )
-
-    print('Saved updated data')
+        print('Saved updated data')
 
 
 # saves a key 'downvoted' into the post info table

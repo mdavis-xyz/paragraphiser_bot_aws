@@ -110,6 +110,9 @@ Resources:
                    ProvisionedThroughput:
                          ReadCapacityUnits: 5
                          WriteCapacityUnits: 5
+                   Tags:
+                       - Key: reddit-bot
+                         Value: !Ref "botname"
 
       # this table contains a list of timestamps for the future, and post ids
       # at those times we will go back and check the original post and our comment
@@ -132,6 +135,9 @@ Resources:
                    ProvisionedThroughput:
                          ReadCapacityUnits: 5
                          WriteCapacityUnits: 5
+                   Tags:
+                       - Key: reddit-bot
+                         Value: !Ref "botname"
 
       #######################
       # checkForNew
@@ -465,6 +471,9 @@ Resources:
                    ProvisionedThroughput:
                          ReadCapacityUnits: 5
                          WriteCapacityUnits: 5
+                   Tags:
+                       - Key: reddit-bot
+                         Value: !Ref "botname"
       filteredErrorTopic:
           Type: "AWS::SNS::Topic"
           Properties:

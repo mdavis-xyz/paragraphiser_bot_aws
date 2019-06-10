@@ -110,6 +110,9 @@ Resources:
                    ProvisionedThroughput:
                          ReadCapacityUnits: 5
                          WriteCapacityUnits: 5
+                   Tags:
+                       - Key: reddit-bot
+                         Value: !Ref "botname" 
 
       # this table contains a list of timestamps for the future, and post ids
       # at those times we will go back and check the original post and our comment
@@ -132,6 +135,9 @@ Resources:
                    ProvisionedThroughput:
                          ReadCapacityUnits: 5
                          WriteCapacityUnits: 5
+                   Tags:
+                       - Key: reddit-bot
+                         Value: !Ref "botname" 
 
       #######################
       # checkForNew
@@ -180,7 +186,7 @@ Resources:
                    bot_name:
                        Ref: "botname"
                    subreddits: # comma separated
-                       "bottest,StallmanWasRight,technology,ainbow,ABoringDystopia,Android,AusPol,Australia,Bitcoin,Buttcoin,CryptoCurrency,DarkFuturology,design,frontend,linux,netflix,opensource,piracy,privacy,stopbeingevil,sydney,todayilearned"
+                       "bottest,StallmanWasRight,technology,ainbow,ABoringDystopia,Android,AusPol,Australia,Bitcoin,Buttcoin,CryptoCurrency,DarkFuturology,design,frontend,linux,opensource,piracy,privacy,stopbeingevil,sydney,todayilearned"
                    enable:
                        TRUE
                    errorHandlerArn:
@@ -467,6 +473,9 @@ Resources:
                    ProvisionedThroughput:
                          ReadCapacityUnits: 5
                          WriteCapacityUnits: 5
+                   Tags:
+                       - Key: reddit-bot
+                         Value: !Ref "botname" 
       filteredErrorTopic:
           Type: "AWS::SNS::Topic"
           Properties:

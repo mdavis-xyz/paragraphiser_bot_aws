@@ -113,6 +113,8 @@ Resources:
                    Tags:
                        - Key: reddit-bot
                          Value: !Ref "botname" 
+                       - Key: reddit-db-type
+                         Value: postHistory
 
       # this table contains a list of timestamps for the future, and post ids
       # at those times we will go back and check the original post and our comment
@@ -138,6 +140,9 @@ Resources:
                    Tags:
                        - Key: reddit-bot
                          Value: !Ref "botname" 
+                       - Key: reddit-db-type
+                         Value: schedule
+
 
       #######################
       # checkForNew
@@ -476,6 +481,8 @@ Resources:
                    Tags:
                        - Key: reddit-bot
                          Value: !Ref "botname" 
+                       - Key: reddit-db-type
+                         Value: error
       filteredErrorTopic:
           Type: "AWS::SNS::Topic"
           Properties:

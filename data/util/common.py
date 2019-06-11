@@ -15,7 +15,17 @@ import json
 hash_key_val = 'data'
 
 # bot replies for posts with at least this many characters without a new line
-size_limit = 2300
+def get_size_limit(num_paragraphs):
+    if num_paragraphs == 1:
+        return(2000)
+    elif num_paragraphs < 5:
+        return(2500)
+    elif num_paragraphs < 10:
+        return(3000)
+    elif num_paragraphs < 20:
+        return(3500)
+    else:
+        return(4000)
 
 # to be called by checkForNew
 def unit_tests():
@@ -174,6 +184,8 @@ def generate_reply(submission,debug=False):
         max_size = max_paragraph_size(submission.selftext) # num chars
         max_words = count_words_max(submission.selftext)  # num words
         num_paragraphs = len(split_by_paragraph(submission.selftext))
+        size_limit = get_size_limit(num_paragraphs)
+        print("Size limit for %d paragraphs is %d chars" % (num_paragraphs,size_limit))
         if max_size < size_limit:
             print('Submission %s is not eligible for reply because it is too short' % submission.id)
             return(None)
@@ -220,7 +232,8 @@ def update_reply(submission,comment,data):
     assert(type(x) == type(''))
 
     max_size = max_paragraph_size(submission.selftext)
-
+    num_paragraphs = len(split_by_paragraph(submission.selftext))
+    size_limit = get_size_limit(num_paragraphs)
     if max_size >= size_limit:
         print('largest paragraph is %d characters' % max_size)
         print('Debug lengths:')
@@ -234,10 +247,20 @@ def update_reply(submission,comment,data):
         if 'prev_words' in data:
             print("Found prev_words in data")
             prev_words = data['prev_words']
-        else:
+        elif 'original_post' in data:
             print("No prev_words in data, using original_post")
             prev_words = count_words_max(data['original_post'])
+        elif ('data' in data) and ('original_post' in data['data']):
+            print("No prev_words or data[original_post], using data['data']['original_post']")
+            prev_words = count_words_max(data['data']['original_post'])
+        else:
+            print("data has keys: %s" % str(data.keys()))
+            assert(False)
         cur_words = count_words_max(submission.selftext)
+
+        if cur_words == prev_words:
+            print("Something funny happened, probably a change in limits, doing nothing")
+            return(None)
 
         reply_template_fname = './replyTemplateUpdate.mako'
 
